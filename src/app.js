@@ -10,6 +10,9 @@
   const stage = new RS.VisualStage($('visualCanvas'));
   const audio = new RS.AudioEngine((position, event) => {
     stage.setActive(event?.sourceNodeId || null);
+    stage.setPosition(position);
+    updateAlgorithmProgress(position);
+    updateTransport();
     $('elapsed').textContent = RS.formatTime(position);
     $('timeline').value = composition?.duration ? Math.round(position / composition.duration * 1000) : 0;
     $('timeline').style.setProperty('--range-fill', `${composition?.duration ? position / composition.duration * 100 : 0}%`);
@@ -28,6 +31,22 @@
     else if (!audio.loop) toast('Your composition has finished playing.');
   });
 
+  function updateAlgorithmProgress(position) {
+    if(!scene || !composition)return;
+    const node=$('algorithmProgress');
+    node.hidden=!['koch','hanoi'].includes(scene.algorithm);
+    if(scene.algorithm==='hanoi'){
+      const moves=composition.events.filter(e=>e.kind==='melody');
+      const event=moves.filter(e=>e.time<=position).at(-1);
+      const move=event?scene.moves.find(m=>m.id===event.sourceNodeId):null;
+      const finished=position >= moves.at(-1).time+moves.at(-1).moveDuration;
+      node.textContent=(finished?'Complete \u00b7 ':'')+'Move '+(event?move.index+1:0)+' / '+scene.moves.length+' \u00b7 '+(move?['Left','Middle','Right'][move.from]+' \u2192 '+['Left','Middle','Right'][move.to]:'Left \u2192 Right')+' \u00b7 Recursion depth '+(move?.depth||0);
+    }
+    if(scene.algorithm==='koch'){
+      const iteration=composition.iterations.filter(i=>i.time<=position).at(-1)||composition.iterations[0];
+      node.textContent='Iteration '+iteration.depth+' / '+scene.depth+' \u00b7 '+scene.levels[iteration.depth].length.toLocaleString()+' segments \u00b7 '+(scene.mode==='curve'?'Curve':'Snowflake');
+    }
+  }
   function toast(message, isError = false) {
     const node = $('toast');
     node.textContent = message;
@@ -40,8 +59,8 @@
     document.documentElement.dataset.theme = isDark ? 'dark' : 'light';
     $('themeButton').setAttribute('aria-label', `Switch to ${isDark ? 'light' : 'dark'} theme`);
     $('themeButton').setAttribute('title', `Switch to ${isDark ? 'light' : 'dark'} theme`);
-    $('moonIcon').hidden = !isDark;
-    $('sunIcon').hidden = isDark;
+    $('moonIcon').toggleAttribute('hidden', !isDark);
+    $('sunIcon').toggleAttribute('hidden', isDark);
     document.querySelector('meta[name="theme-color"]').content = isDark ? '#090b16' : '#f6f8fc';
     stage.setTheme(theme);
   }
@@ -78,7 +97,7 @@
       scene = result;
       composition = music;
       audio.load(composition, state);
-      stage.setScene(scene);
+      stage.setScene(scene, composition);
       updateTransport();
       const info = RS.algorithmInfo[state.algorithm];
       $('vizTitle').textContent = info.title;
@@ -92,8 +111,14 @@
       $('eventCount').textContent = music.noteCount.toLocaleString();
       $('lengthMetric').textContent = RS.formatTime(music.duration);
       $('duration').textContent = RS.formatTime(music.duration);
-      $('trackTitle').textContent = `${state.algorithm === 'tree' ? 'Recursive Tree' : state.algorithm === 'sierpinski' ? 'Sierpinski' : 'Fibonacci'} in ${RS.moods[state.mood].name}`;
+      $('trackTitle').textContent = `${info.title} in ${RS.moods[state.mood].name}`;
       $('trackSubtitle').textContent = `${RS.scales[state.scale].name} · ${music.noteCount} musical events`;
+      $('depth').closest('.control-group').hidden = state.algorithm === 'hanoi';
+      $('hanoiControls').hidden = state.algorithm !== 'hanoi';
+      $('moveFormula').textContent = 'Minimum moves: 2^'+state.disks+' \u2212 1 = '+(2**state.disks-1);
+      $('kochControls').hidden = state.algorithm !== 'koch';
+      $('depth').max = state.algorithm === 'koch' ? 5 : 8;
+      updateAlgorithmProgress(0);
       $('treeControls').hidden = state.algorithm !== 'tree';
       selectOptions('[data-algorithm]', 'algorithm', state.algorithm);
       selectOptions('[data-mood]', 'mood', state.mood);
@@ -110,6 +135,10 @@
   document.querySelectorAll('[data-algorithm]').forEach(button => button.addEventListener('click', () => {
     if (state.algorithm === button.dataset.algorithm) return;
     state.algorithm = button.dataset.algorithm;
+    state.depth = Math.min(state.depth,state.algorithm==='koch'?5:8);
+    $('depth').value=state.depth;
+    $('depth').max=state.algorithm==='koch'?5:8;
+    writeSlider('depth');
     generate();
     toast(`${RS.algorithmInfo[state.algorithm].title} selected.`);
   }));
@@ -119,7 +148,7 @@
     generate(); // mood change takes effect without requiring a different algorithm
     toast(`${RS.moods[state.mood].name} soundscape selected.`);
   }));
-  ['depth', 'tempo', 'density', 'branchAngle', 'branchLength', 'volume'].forEach(id => {
+  ['depth', 'disks', 'tempo', 'density', 'branchAngle', 'branchLength', 'volume'].forEach(id => {
     writeSlider(id, id === 'branchAngle' ? '°' : id === 'branchLength' || id === 'volume' ? '%' : '');
     $(id).addEventListener('input', () => {
       writeSlider(id, id === 'branchAngle' ? '°' : id === 'branchLength' || id === 'volume' ? '%' : '');
@@ -127,12 +156,12 @@
     });
     if (id !== 'volume') $(id).addEventListener('change', () => generate());
   });
-  ['scale', 'instrument'].forEach(id => $(id).addEventListener('change', () => { state[id] = $(id).value; generate(); }));
+  ['scale', 'instrument', 'kochMode'].forEach(id => $(id).addEventListener('change', () => { state[id] = $(id).value; generate(); }));
   $('generateButton').addEventListener('click', () => generate(true));
   $('themeButton').addEventListener('click', () => {
     setTheme(document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark');
   });
-  setTheme('light');
+  setTheme('dark');
   $('reducedMotion').checked = stage.reducedMotion;
   $('reducedMotion').addEventListener('change', () => stage.setReducedMotion($('reducedMotion').checked));
   $('loopButton').addEventListener('click', () => { audio.loop = !audio.loop; $('loopButton').setAttribute('aria-pressed', String(audio.loop)); $('loopButton').classList.toggle('active', audio.loop); toast(audio.loop ? 'Loop enabled.' : 'Loop disabled.'); });

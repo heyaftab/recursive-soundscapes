@@ -58,12 +58,12 @@
 
   function renderNote(context, bus, event, settings, startAt, liveSources) {
     const mood = RS.moods[settings.mood] || RS.moods.calm;
-    const voice = event.kind === 'pad' ? 'pad' : event.kind === 'bass' ? 'soft' : settings.instrument;
+    const voice = event.kind === 'pad' ? 'pad' : event.kind === 'bass' ? 'soft' : (event.voice || settings.instrument);
     const freq = midiFreq(event.pitch);
     const now = context.currentTime || 0;
     const at = Math.max(now + .001, startAt);
     const duration = Math.max(.12, event.duration);
-    const release = event.kind === 'bass' ? .36 : event.kind === 'pad' ? Math.max(1.25, mood.release) : mood.release;
+    const release = event.release ?? (event.kind === 'bass' ? .36 : event.kind === 'pad' ? Math.max(1.25, mood.release) : mood.release);
     const attack = event.kind === 'pad' ? .36 : voice === 'pad' ? .22 : mood.attack;
     const sustain = Math.max(.04, duration - Math.min(duration * .5, attack));
     const stopAt = at + duration + release + .08;
@@ -106,6 +106,7 @@
 
   class AudioEngine {
     constructor(onTick, onEnded) {
+      this.playToken = 0;
       this.context = null;
       this.timer = null;
       this.composition = null;
@@ -141,8 +142,8 @@
       // Find a recent melodic event; its node is the source of the audible note.
       for (let i = this.composition.events.length - 1; i >= 0; i--) {
         const e = this.composition.events[i];
-        if (e.time > position + .025 || e.kind !== 'melody') continue;
-        if (position < e.time + Math.min(.8, Math.max(.22, e.duration))) return e;
+        if (e.time > position || e.kind !== 'melody') continue;
+        if (position < e.time + (e.moveDuration || Math.min(.8, Math.max(.22, e.duration)))) return e;
         return null;
       }
       return null;
@@ -150,7 +151,9 @@
     async play() {
       if (!this.composition) throw new Error('Generate a composition before playing.');
       if (this.playing) return;
+      const token=++this.playToken;
       await this.initialize();
+      if(token!==this.playToken)return;
       if (this.offset >= this.composition.duration - .05) this.offset = 0;
       this.settings = { ...this.settings };
       this.bus = buildBus(this.context, this.settings, this.settings.volume);
@@ -159,6 +162,12 @@
       this.pointer = this.composition.events.findIndex(e => e.time >= this.offset - .002);
       if (this.pointer === -1) this.pointer = this.composition.events.length;
       this.playing = true;
+      // Resume the audible portion of a note when seeking or pausing mid-event.
+      if(this.offset>0)for(const event of this.composition.events){
+        if(event.time<this.offset && event.time+event.duration>this.offset){
+          renderNote(this.context,this.bus,{...event,duration:event.time+event.duration-this.offset},this.settings,this.startTime+this.offset,this.sources);
+        }
+      }
       this._tick();
       this.timer = window.setInterval(() => this._tick(), 30);
     }
@@ -185,6 +194,7 @@
       }
     }
     _silence() {
+      this.playToken++;
       if (this.timer) window.clearInterval(this.timer);
       this.timer = null;
       if (this.bus && this.context) {

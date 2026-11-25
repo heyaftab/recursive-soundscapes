@@ -4,7 +4,7 @@
 
 - [x] All JavaScript modules pass `node --check`.
 - [x] The main page loads in Chromium without JavaScript exceptions.
-- [x] Three recursive scenes generate nonempty and bounded node lists.
+- [x] Five recursive scenes generate nonempty and bounded node lists.
 - [x] Each scene maps to finite, correctly shaped musical events.
 - [x] Music events use IDs found in the scene.
 - [x] Generated pitches belong to the selected scale.
@@ -32,7 +32,7 @@ Chrome, Edge and Firefox on desktop are suggested for the live demo. Audio permi
 
 - Active-node highlights use `MusicEvent.sourceNodeId`, never a separate visual timeline.
 - Both live and offline synthesis call the same `renderNote()` and `buildBus()` functions.
-- The recursion level is capped at 8, nodes at 10,000, melodic notes at 105, and composition duration at 95 seconds.
+- Original algorithms keep depth 8, 10,000 nodes, 105 melody notes, and 95-second limits. New algorithms use Koch depth 5 / Hanoi 8 disks, fewer than 400 total events, below 200 seconds, and at most 12 overlapping note voices.
 - Initial browser load does not initialize or play the audio context.
 
 
@@ -47,3 +47,25 @@ Chrome, Edge and Firefox on desktop are suggested for the live demo. Audio permi
 - **Test environment note:** The sandbox's Chromium blocks navigation to `file://` and `localhost` by administrator policy, so the in-container browser tests injected the same HTML/CSS/JS contents into a Chromium page. This does not indicate ordinary browsers block opening `index.html`; direct file-opening on the user's machine has not been separately verified here.
 
 **Still recommended manually:** listen to all four mood/instrument combinations with headphones, export a long composition, and check the target demo laptop/browser before submission.
+
+
+## Extension verification (2026-11-26)
+
+- node tests/verify.cjs: PASS, 135 original algorithm/scale/depth/density regressions.
+- node tests/extensions.cjs: PASS, 2,520 new combinations across minimum/default/maximum Koch depths, all Hanoi disk counts, tempos 40/80/160, densities 1/4/10, all five scales, and all four moods.
+- Geometry: every Koch level has 4^N or 3*4^N segments, continuous endpoints and expected 1/3 length ratios. Normalized coordinates fit the stage.
+- Hanoi: independent peg replay validates every move, before/after snapshots, top-disk source, legal destination, final right-peg stack, 2^N-1 count, and one ordered melody event per move. Density leaves timing and sequence intact.
+- Events: unique IDs, valid source references, finite time/pitch/duration/depth/velocity/pan, selected-scale notes, safe register, deterministic regeneration for a fixed seed, bounded total duration, and no more than 12 simultaneous note voices including release.
+- Chromium: all five choices load without console exceptions. Verified Koch curve/snowflake counts at depth 5, Hanoi eight-disk count, contextual controls, Play/Pause/Resume, seek, Stop reset, regenerate while playing, algorithm switching, completion text, loop restart and player-state synchronization.
+- Responsive: 390x844 viewport has no horizontal overflow. Captured desktop and full-page mobile screenshots of both new algorithms; checked dark styling, geometry fit, disks, and status. Reduced-motion setting tested.
+- Export: the actual Export WAV button produces a downloaded RIFF file. Thirty-two offline renders (Koch and Hanoi in all four moods and all four instruments) produce stereo, 44,100-Hz, 16-bit WAVs with nonzero signal, peak below 0.11, and no clipped samples for these short test compositions.
+
+### Browser test setup
+
+The app needs no installation. Browser tests require Playwright and Google Chrome. Install Playwright in an external tooling folder, then set PLAYWRIGHT_MODULE to the absolute module path if it is not otherwise resolvable. CHROME_PATH optionally overrides the Windows Chrome executable. The implementation session used an isolated temporary tooling folder named recursive-soundscapes-verification. The suite starts a temporary localhost static server and closes it after verification; no backend is introduced into the app.
+
+### Manual listening check
+
+Automated checks validate audio content and signal bounds, not artistic listening quality. Listen with headphones at a comfortable volume to compare layering, disk-size melody, all instruments, and the full eight-disk resolution.
+
+Final edge checks: zero-volume export is digitally silent; Stop invalidates a pending asynchronous audio start. Koch normalized endpoint lengths preserve the equilateral construction without aspect distortion.

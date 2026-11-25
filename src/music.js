@@ -26,7 +26,60 @@
   RS.noteName = (midi) => MIDI_NAMES[positiveMod(midi, 12)] + (Math.floor(midi / 12) - 1);
   RS.formatTime = (n) => { const seconds = Math.max(0, Math.floor(n || 0)); return `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`; };
 
+  function recursiveComposition(scene,s) {
+    const scale=SCALES[s.scale]||SCALES.pentatonic,mood=MOODS[s.mood]||MOODS.calm;
+    const beat=60/RS.clamp(s.tempo,40,160),density=Math.round(RS.clamp(s.density,1,10));
+    const events=[],iterations=[];
+    const safePitch=pitch=>{while(pitch>89)pitch-=12;while(pitch<45)pitch+=12;return pitch;};
+    const add=(node,time,pitch,duration,kind='melody',velocity=.27)=>events.push({
+      id:kind+'-'+node.id+'-'+events.length,time,pitch:safePitch(pitch),duration,velocity:velocity*mood.velocity*(.92+((Math.imul(s.seed+node.index+1,16807)>>>0)%17)/100),
+      depth:node.depth,pan:node.pan,sourceNodeId:node.id,kind,layer:node.depth,
+      release:Math.min(mood.release,kind==='melody'?.8:1.2),
+      voice:kind==='melody'&&node.depth>0&&node.depth%3===0?'bell':s.instrument
+    });
+    if(scene.algorithm==='koch'){
+      let cursor=0;
+      for(let level=0;level<=scene.depth;level++){
+        const segments=scene.levels[level],count=Math.min(segments.length,8+density*2);
+        const step=beat*(density>=8?.5:.75);
+        iterations.push({depth:level,time:cursor,duration:step*count});
+        for(let i=0;i<count;i++){
+          const node=segments[Math.floor(i*segments.length/count)];
+          const degree=Math.round(node.orientation/(Math.PI/3))+Math.floor(s.seed/137)%scale.steps.length;
+          const octave=Math.min(2,level-1);
+          const duration=Math.max(.12,Math.min(step*.95,beat*1.6*node.length*mood.noteFactor));
+          add(node,cursor+i*step,toneFromIndex(degree,scale,octave),duration);
+          if(level>0&&i%Math.max(3,11-density)===0){
+            const lower=scene.levels[level-1][Math.floor(i*scene.levels[level-1].length/count)];
+            add(lower,cursor+i*step,toneFromIndex(Math.round(lower.orientation/(Math.PI/3)),scale,Math.max(-1,octave-1)),step*1.4,'pad',.10);
+          }
+        }
+        cursor+=count*step;
+      }
+    }
+    if(scene.algorithm==='hanoi'){
+      const step=beat*.5;
+      for(const node of scene.moves){
+        const degree=scene.disks-node.disk;
+        const pitch=scale.root-12+Math.floor(degree/scale.steps.length)*12+scale.steps[degree%scale.steps.length];
+        add(node,.15+node.index*step,pitch,Math.min(step*.8,beat*mood.noteFactor*.6));
+        if(density>2&&node.index%Math.max(3,13-density)===0){
+          add(node,.15+node.index*step,toneFromIndex(degree+2,scale,-1),step*1.4,'pad',.09);
+        }
+      }
+    }
+    if(scene.algorithm==='hanoi')for(const e of events)if(e.kind==='melody')e.moveDuration=beat*.5;
+    const primary=events.filter(e=>e.kind==='melody'),accepted=[...primary];
+    for(const e of events.filter(e=>e.kind!=='melody')){
+      if(accepted.filter(n=>n.time<e.time+e.duration+e.release+.13&&n.time+n.duration+n.release+.13>e.time).length<10)accepted.push(e);
+    }
+    accepted.sort((a,b)=>a.time-b.time||a.id.localeCompare(b.id));
+    const duration=Math.max(...accepted.map(e=>e.time+e.duration+e.release+.13))+1.8;
+    return {algorithm:scene.algorithm,seed:s.seed,events:accepted,duration,iterations,nodeCount:scene.totalNodes,noteCount:accepted.length,scale:s.scale,mood:s.mood};
+  }
+
   RS.makeComposition = function (scene, s) {
+    if(scene.algorithm==='koch'||scene.algorithm==='hanoi')return recursiveComposition(scene,s);
     const scale = SCALES[s.scale] || SCALES.pentatonic;
     const mood = MOODS[s.mood] || MOODS.calm;
     const random = rnd(s.seed + 17);

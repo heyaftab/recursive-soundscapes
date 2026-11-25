@@ -12,7 +12,7 @@
 
 ### 🌀 Fibonacci &nbsp;•&nbsp; 🔺 Sierpinski &nbsp;•&nbsp; 🌳 Recursive Tree
 
-*Three recursive algorithms generate the **actual musical events** you hear.<br/>
+*Five recursive algorithms generate the **actual musical events** you hear.<br/>
 The same event timeline drives the glowing node animation and the WAV export.*
 
 [🚀 Quick Start](#-quick-start) · [✨ Features](#-features) · [🧠 How It Works](#-how-the-music-is-born) · [🏗️ Architecture](#️-architecture) · [☁️ Deploy](#️-deploy-to-vercel) · [♿ Accessibility](#-keyboard--accessibility)
@@ -235,3 +235,35 @@ Project source created for the user. The original procedural music is synthesize
 <img src="public/footer.svg" alt="Animated sound waves — Made with recursion, curiosity and calm" width="100%" />
 
 </div>
+
+## Five algorithms, one musical timeline
+
+1. **Fibonacci Sequence:** sequence values select notes; sequence order creates the melody.
+2. **Sierpinski Triangle:** recursively subdivided triangles map position to stereo pan and depth to register.
+3. **Recursive Branching Tree:** branch geometry shapes pitch, register, and stereo movement.
+4. **Koch Snowflake / Curve:** choose an equilateral triangle or straight line. Each segment recursively becomes four. Playback morphs through every iteration; orientation selects scale notes, segment length sets bounded note duration, and horizontal position pans the sound. Successive iterations rise through octave layers, with selected lower-register echoes. Upper layers share a capped register to keep the sound comfortable.
+5. **Towers of Hanoi (experimental):** a complete recursive solution on three pegs. Larger disks sound lower notes, each destination selects pan (-0.8, 0, +0.8), and recursion depth colors the timbre. Every move is retained in order, including all 255 moves at eight disks.
+
+Only relevant controls appear: Koch mode and depth 1-5, Hanoi disks 1-8, or tree geometry. All algorithms retain tempo, density, scales, four moods, instrument selection, volume, looping, seek, regenerate, reduced motion, and stereo WAV export. The studio starts in its dark theme and retains the light-theme toggle.
+
+### Geometry, timing, and sound limits
+
+Koch renders every segment: curve = 4^N; snowflake = 3 * 4^N (maximum 3,072 final segments). Music samples an ordered, bounded traversal of each iteration rather than sounding thousands of simultaneous notes. Completed iteration geometry uses cached canvas paths; subdivisions interpolate from parent segments.
+
+Hanoi uses 2^N - 1 legal moves. A move lasts half a beat; density changes supporting textures without changing move count, order, or timing. The disk state is reconstructed from immutable move snapshots and playback position, so pause, seek, and stop preserve mathematical validity. Regeneration changes subtle musical accents while retaining the canonical solution.
+
+Every event has id, time, pitch, duration, velocity, depth, pan, and sourceNodeId. New events also carry layer/voice and bounded release; Hanoi melody events carry moveDuration. Shared audio-clock position drives both new visualizations. No independent animation timer determines recursive progress.
+
+New compositions stay below 400 events, 200 seconds, and 12 simultaneous note voices including release tails. Pitches stay in the selected scale within MIDI 45-89. Conservative gain and the shared compressor provide headroom. Live playback and WAV export use the same event list, voice selection, envelope, pan, and effects graph.
+
+### Verification
+
+Run from the project root:
+
+```sh
+node tests/verify.cjs
+node tests/extensions.cjs
+node tests/browser.cjs
+```
+
+The browser suite requires Playwright as test tooling and a local Chrome installation; it is not an application dependency. See [testing details](docs/TESTING.md).
