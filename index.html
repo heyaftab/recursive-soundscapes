@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="theme-color" content="#f6f8fc" />
+  <meta name="description" content="Recursive Soundscapes — listen to the hidden music of mathematics. A generative ambient music studio powered by recursion." />
+  <title>Recursive Soundscapes — Hear the Pattern</title>
+  <link rel="icon" type="image/png" href="./public/logo.png?v=transparent" />
+  <link rel="stylesheet" href="./src/styles.css?v=play-state" />
+</head>
+<body>
+  <div class="backdrop-grain" aria-hidden="true"></div>
+  <div class="app-shell">
+    <header class="topbar">
+      <div class="brand-area">
+        <a class="brand" href="#main" aria-label="Recursive Soundscapes home">
+          <span class="brand-symbol" aria-hidden="true"><img src="./public/logo.png?v=transparent" alt="" /></span>
+          <span class="brand-name">recursive<span>soundscapes</span><small>GENERATIVE AUDIO STUDIO</small></span>
+        </a>
+        <div class="brand-separator" aria-hidden="true"></div>
+        <span class="topbar-subtitle">Where mathematics becomes music.</span>
+      </div>
+      <div class="topbar-actions">
+        <span class="topbar-status"><i class="live-dot"></i><span>STUDIO ONLINE</span></span>
+        <button class="icon-button theme-button" id="themeButton" type="button" aria-label="Switch to dark theme" title="Switch to dark theme">
+          <svg id="moonIcon" viewBox="0 0 24 24" fill="none" aria-hidden="true" hidden><path d="M20.2 15.1A8.4 8.4 0 0 1 8.9 3.8 8.5 8.5 0 1 0 20.2 15.1Z" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          <svg id="sunIcon" viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="12" r="4" stroke="currentColor" stroke-width="1.7"/><path d="M12 2v2m0 16v2M4.93 4.93l1.42 1.42m11.3 11.3 1.42 1.42M2 12h2m16 0h2M4.93 19.07l1.42-1.42m11.3-11.3 1.42-1.42" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
+        </button>
+        <button class="icon-button" id="helpButton" type="button" aria-label="How it works" title="How it works"><svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.8"/><path d="M9.8 9.4a2.4 2.4 0 1 1 3.8 2c-1.4 1-1.6 1.4-1.6 2" stroke="currentColor" stroke-linecap="round" stroke-width="1.8"/><circle cx="12" cy="17" r="1" fill="currentColor"/></svg></button>
+      </div>
+    </header>
+
+    <main id="main">
+      <section class="hero-heading" aria-label="Introduction">
+        <div><div class="eyebrow"><span class="dash"></span> THE ART OF ALGORITHMIC SOUND</div><h1>Hear the <em>pattern.</em></h1><p>Shape an algorithm. Watch it unfold. Listen to what it creates.</p></div>
+        <div class="hero-index"><span>01 / ∞</span><small>AN INFINITE PLAYGROUND</small></div>
+      </section>
+
+      <div class="workspace-layout">
+        <aside class="panel settings-panel" aria-labelledby="algoHeading">
+          <div class="panel-title"><div><span class="section-number">01</span><h2 id="algoHeading">Algorithm studio</h2></div><span class="small-orb"></span></div>
+          <p class="field-heading">CHOOSE YOUR PATTERN</p>
+          <div class="algorithm-options" role="radiogroup" aria-label="Recursive algorithm">
+            <button class="algorithm-card selected" data-algorithm="fibonacci" role="radio" aria-checked="true" type="button"><span class="algorithm-glyph fib-glyph">φ</span><span class="algo-copy"><strong>Fibonacci</strong><small>Flowing & melodic</small></span><span class="algo-check" aria-hidden="true"></span></button>
+            <button class="algorithm-card" data-algorithm="sierpinski" role="radio" aria-checked="false" type="button"><span class="algorithm-glyph triangle-glyph">△</span><span class="algo-copy"><strong>Sierpinski</strong><small>Geometric & spatial</small></span><span class="algo-check" aria-hidden="true"></span></button>
+            <button class="algorithm-card" data-algorithm="tree" role="radio" aria-checked="false" type="button"><span class="algorithm-glyph tree-glyph">♧</span><span class="algo-copy"><strong>Recursive tree</strong><small>Organic & evolving</small></span><span class="algo-check" aria-hidden="true"></span></button>
+          </div>
+
+          <div class="control-divider"></div>
+          <p class="field-heading">SHAPE YOUR COMPOSITION</p>
+          <div class="control-group"><label for="depth"><span>Recursion depth <span class="hint" title="Number of recursive levels">ⓘ</span></span><output id="depthValue" for="depth">4</output></label><input type="range" id="depth" min="1" max="8" step="1" value="4" /><div class="range-labels"><span>Simple</span><span>Complex</span></div></div>
+          <div class="control-group"><label for="tempo"><span>Tempo</span><output id="tempoValue" for="tempo">80 BPM</output></label><input type="range" id="tempo" min="40" max="160" step="1" value="80" /><div class="range-labels"><span>Slow</span><span>Fast</span></div></div>
+          <div class="control-group"><label for="density"><span>Note density</span><output id="densityValue" for="density">4 / 10</output></label><input type="range" id="density" min="1" max="10" step="1" value="4" /><div class="range-labels"><span>Sparse</span><span>Rich</span></div></div>
+          <div id="treeControls" class="tree-controls" hidden><div class="control-group"><label for="branchAngle"><span>Branch angle</span><output id="branchAngleValue" for="branchAngle">32°</output></label><input type="range" id="branchAngle" min="16" max="50" step="1" value="32" /></div><div class="control-group"><label for="branchLength"><span>Branch length</span><output id="branchLengthValue" for="branchLength">72%</output></label><input type="range" id="branchLength" min="60" max="80" step="1" value="72" /></div></div>
+          <div class="control-group compact-control"><label for="scale">Musical scale</label><div class="select-wrap"><select id="scale"><option value="pentatonic">C Major Pentatonic</option><option value="major">C Major</option><option value="minor">A Natural Minor</option><option value="dorian">D Dorian</option><option value="lydian">F Lydian</option></select><span aria-hidden="true">⌄</span></div></div>
+          <button type="button" id="generateButton" class="generate-button"><svg viewBox="0 0 24 24" fill="none"><path d="M20 7v5h-5M4 17v-5h5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M6 9a7 7 0 0 1 11.7-2.7L20 12M4 12l2.3 5.7A7 7 0 0 0 18 15" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>Generate new variation<span class="shortcut">↻</span></button>
+        </aside>
+
+        <section class="visual-panel" aria-labelledby="vizTitle">
+          <div class="visual-topbar"><div class="viz-title-area"><span class="live-indicator"><i class="live-dot"></i> LIVE RECURSION</span><h2 id="vizTitle">Fibonacci spiral</h2><p id="vizSubtitle">Every number tells a story. Every note follows it.</p></div><div class="viz-number">FIG <span id="figureNumber">01</span> <span class="tiny-squiggle">⌁</span></div></div>
+          <div class="visual-stage"><canvas id="visualCanvas" role="img" aria-label="Visualization of the selected recursive algorithm, synchronized with the music"></canvas><div class="stage-coordinate top-left" aria-hidden="true">x ∈ [0, 1]</div><div class="stage-coordinate top-right" aria-hidden="true">ƒ(x)</div><div class="stage-coordinate bottom-right" aria-hidden="true">VISUALIZING RECURSION <span>●</span></div>
+            <div class="active-note" id="activeNote"><div class="note-icon"><span>♫</span></div><div><span class="active-note-label" id="activeNoteLabel">AWAITING YOUR PLAY</span><strong id="activeNoteText">C · ready to resonate</strong></div></div>
+          </div>
+          <div class="visual-footer"><div class="metric"><small>RECURSIVE NODES</small><strong id="nodeCount">0</strong></div><div class="metric"><small>MUSICAL EVENTS</small><strong id="eventCount">0</strong></div><div class="metric"><small>COMPOSITION LENGTH</small><strong id="lengthMetric">00:00</strong></div><div class="legend"><span><i class="legend-dot cyan"></i>Structure</span><span><i class="legend-dot purple"></i>Active note</span></div></div>
+          <div class="recursion-explain" id="recursionExplain" aria-live="polite"><span class="explain-symbol">ƒ</span><p id="recursionDescription">Each Fibonacci number comes from the sum of the previous two. The sequence determines each note's pitch and position in time.</p></div>
+        </section>
+
+        <aside class="panel sound-panel" aria-labelledby="soundHeading"><div class="panel-title"><div><span class="section-number">02</span><h2 id="soundHeading">Sound studio</h2></div><span class="small-orb purple-orb"></span></div>
+          <p class="field-heading">CHOOSE YOUR ATMOSPHERE</p>
+          <div class="mood-grid" role="radiogroup" aria-label="Sound mood"><button class="mood-tile selected" type="button" role="radio" data-mood="calm" aria-checked="true"><span class="mood-symbol">◌</span><strong>Calm</strong><small>Soft & peaceful</small></button><button class="mood-tile" type="button" role="radio" data-mood="dreamy" aria-checked="false"><span class="mood-symbol">✧</span><strong>Dreamy</strong><small>Airy & ethereal</small></button><button class="mood-tile" type="button" role="radio" data-mood="focus" aria-checked="false"><span class="mood-symbol">≋</span><strong>Deep focus</strong><small>Rhythmic & steady</small></button><button class="mood-tile" type="button" role="radio" data-mood="meditation" aria-checked="false"><span class="mood-symbol">☾</span><strong>Meditation</strong><small>Slow & spacious</small></button></div>
+          <div class="control-divider"></div>
+          <div class="control-group compact-control"><label for="instrument">Instrument voice</label><div class="select-wrap"><select id="instrument"><option value="soft">Soft keys</option><option value="bell">Glass bells</option><option value="pad">Warm analog pad</option><option value="pluck">Plucked strings</option></select><span aria-hidden="true">⌄</span></div></div>
+          <div class="volume-heading"><label for="volume">Master volume</label><output id="volumeValue" for="volume">65%</output></div><div class="volume-row"><svg class="speaker-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M5 9h4l5-4v14l-5-4H5V9Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg><input id="volume" type="range" min="0" max="100" value="65" step="1" /><svg class="speaker-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 9h4l5-4v14l-5-4H4V9ZM17 9a4 4 0 0 1 0 6M19.5 6a8 8 0 0 1 0 12" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+          <div class="control-divider"></div>
+          <div class="mapping-heading"><span>THE SCIENCE OF SOUND</span><span class="spark-symbol">✳</span></div>
+          <div class="mapping-card"><div class="mapping-decoration" aria-hidden="true"><span class="eq-circle">ƒ</span><span class="eq-line">·······</span><span class="eq-note">♫</span></div><h3>From math to melody</h3><p id="mappingDescription">Fibonacci values shape the melody, while their sequence determines timing. Every sound you hear comes from the math.</p><div class="mapping-tags"><span id="mappingTag1">VALUE → PITCH</span><span id="mappingTag2">INDEX → RHYTHM</span></div></div>
+          <label class="switch-row" for="reducedMotion"><span><strong>Reduced motion</strong><small>Calmer visual animation</small></span><span class="switch"><input id="reducedMotion" type="checkbox" /><span class="switch-track"></span></span></label>
+          <div class="quiet-note"><span class="note-asterisk">✳</span> Best experienced with headphones, at a comfortable volume.</div>
+        </aside>
+      </div>
+
+      <section class="player-panel" aria-label="Audio playback controls"><div class="player-main"><div class="now-playing"><div class="mini-cover" aria-hidden="true"><span class="cover-orbit"></span><span class="cover-dot"></span></div><div><span class="playing-eyebrow" id="playingEyebrow">YOUR COMPOSITION</span><strong id="trackTitle">Fibonacci in Calm</strong><small id="trackSubtitle">Original generative soundscape</small></div></div>
+      <div class="transport"><button id="stopButton" class="transport-secondary" type="button" title="Stop" aria-label="Stop playback"><svg viewBox="0 0 24 24" fill="currentColor"><rect x="7" y="7" width="10" height="10" rx="1.5" /></svg></button><button id="playButton" class="play-button" type="button" title="Play" aria-label="Play"><svg id="playIcon" viewBox="0 0 24 24" fill="currentColor"><path d="m8 5 12 7-12 7V5Z" /></svg><svg id="pauseIcon" viewBox="0 0 24 24" fill="currentColor" hidden><rect x="6" y="5" width="4" height="14" rx="1.5"/><rect x="14" y="5" width="4" height="14" rx="1.5"/></svg></button><button id="loopButton" class="transport-secondary" type="button" title="Toggle looping" aria-label="Loop composition" aria-pressed="false"><svg viewBox="0 0 24 24" fill="none"><path d="M17 2l3 3-3 3M7 22l-3-3 3-3M4 11V9a4 4 0 0 1 4-4h12M20 13v2a4 4 0 0 1-4 4H4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" /></svg></button></div>
+      <div class="export-area"><button id="exportButton" class="export-button" type="button"><svg viewBox="0 0 24 24" fill="none"><path d="M12 3v12m0 0-4-4m4 4 4-4M5 16v3a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-3" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.7"/></svg><span id="exportLabel">Export WAV</span></button></div></div>
+      <div class="playbar"><span id="elapsed">0:00</span><input id="timeline" class="timeline" type="range" min="0" max="1000" value="0" aria-label="Seek within composition"/><span id="duration">0:00</span></div></section>
+      <footer class="site-footer"><span>BUILT FROM RECURSION. MADE FOR LISTENING.</span><span><i class="footer-dot"></i> LOCAL-FIRST · NO ACCOUNT REQUIRED <span class="footer-divider">/</span> v1.0</span></footer>
+    </main>
+  </div>
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+  <dialog id="helpDialog" class="help-dialog"><div class="dialog-head"><span class="eyebrow">WELCOME TO THE STUDIO</span><button type="button" class="dialog-close" id="closeHelp" aria-label="Close help">×</button></div><h2>The mathematics of music.</h2><p>Choose a pattern, adjust its shape, then press Play. The notes are generated from the recursive structure itself — the glowing shapes you see correspond to the notes you hear.</p><ol><li><strong>Choose</strong> Fibonacci, Sierpinski or the Recursive Tree.</li><li><strong>Shape</strong> the depth, tempo, density and scale.</li><li><strong>Listen</strong> in one of four moods; follow the highlighted nodes.</li><li><strong>Save</strong> your original composition as a WAV file.</li></ol><p class="dialog-tip">Tip: “Generate new variation” keeps the algorithm but changes the melodic interpretation.</p><button class="dialog-action" id="dialogStart" type="button">Start exploring <span>↗</span></button></dialog>
+  <script defer src="./src/algorithms.js"></script>
+  <script defer src="./src/music.js"></script>
+  <script defer src="./src/audio.js"></script>
+  <script defer src="./src/visualization.js?v=theme-toggle"></script>
+  <script defer src="./src/app.js?v=theme-icons"></script>
+</body>
+</html>
