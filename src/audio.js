@@ -53,7 +53,8 @@
     delay.connect(limiter);
     limiter.connect(master);
     master.connect(context.destination);
-    return { input, master };
+    const nodes = [input, limiter, master, reverbSend, convolver, delaySend, delay, feedback];
+    return { input, master, disconnect: () => nodes.forEach(node => { try { node.disconnect(); } catch (_) {} }) };
   }
 
   function renderNote(context, bus, event, settings, startAt, liveSources) {
@@ -63,8 +64,10 @@
     const now = context.currentTime || 0;
     const at = Math.max(now + .001, startAt);
     const duration = Math.max(.12, event.duration);
-    const release = event.release ?? (event.kind === 'bass' ? .36 : event.kind === 'pad' ? Math.max(1.25, mood.release) : mood.release);
-    const attack = event.kind === 'pad' ? .36 : voice === 'pad' ? .22 : mood.attack;
+    const voiceRelease = { marimba: .42, choir: 1.25, flute: .62, strings: 1.05 };
+    const voiceAttack = { marimba: .004, choir: .2, flute: .035, strings: .12 };
+    const release = event.release ?? (voiceRelease[voice] ?? (event.kind === 'bass' ? .36 : event.kind === 'pad' ? Math.max(1.25, mood.release) : mood.release));
+    const attack = event.kind === 'pad' ? .36 : voice === 'pad' ? .22 : (voiceAttack[voice] ?? mood.attack);
     const sustain = Math.max(.04, duration - Math.min(duration * .5, attack));
     const stopAt = at + duration + release + .08;
     const envelope = context.createGain();
@@ -74,9 +77,10 @@
     envelope.gain.setValueAtTime(.0001, stopAt);
     const lowpass = context.createBiquadFilter();
     lowpass.type = 'lowpass';
-    const cutoff = event.kind === 'bass' ? 400 : event.kind === 'pad' ? 900 : voice === 'bell' ? 3200 : voice === 'pluck' ? 2300 : mood.brightness;
+    const voiceBrightness = { marimba: 2800, choir: 1250, flute: 2100, strings: 1650 };
+    const cutoff = event.kind === 'bass' ? 400 : event.kind === 'pad' ? 900 : voice === 'bell' ? 3200 : voice === 'pluck' ? 2300 : (voiceBrightness[voice] || mood.brightness);
     lowpass.frequency.setValueAtTime(cutoff, at);
-    if (voice === 'pluck') lowpass.frequency.exponentialRampToValueAtTime(Math.max(260, cutoff * .35), Math.min(stopAt, at + .6));
+    if (voice === 'pluck' || voice === 'marimba') lowpass.frequency.exponentialRampToValueAtTime(Math.max(260, cutoff * (voice === 'marimba' ? .42 : .35)), Math.min(stopAt, at + .6));
     const panner = context.createStereoPanner ? context.createStereoPanner() : context.createGain();
     if (panner.pan) panner.pan.value = event.pan;
     envelope.connect(lowpass);
@@ -85,9 +89,14 @@
 
     const oscs = [];
     const voices = voice === 'bell' ? [['sine', 1, .92], ['sine', 2.005, .11], ['triangle', 3.01, .065]] :
+      voice === 'marimba' ? [['sine', 1, .76], ['triangle', 3.18, .19], ['sine', 4.82, .055]] :
+      voice === 'choir' ? [['sine', 1, .48], ['triangle', 1.005, .26], ['sine', 2, .16], ['sine', 3.01, .08]] :
+      voice === 'flute' ? [['sine', 1, .88], ['triangle', 2, .075], ['sine', 3, .025]] :
+      voice === 'strings' ? [['sawtooth', 1, .34], ['sawtooth', 1.006, .23], ['triangle', 2, .1]] :
       voice === 'pad' ? [['triangle', 1, .55], ['sawtooth', .998, .16], ['sine', 2, .14]] :
       voice === 'pluck' ? [['triangle', 1, .65], ['sine', 2, .13]] :
       [['sine', 1, .8], ['triangle', 2, .13]];
+    let activeOscillators = voices.length;
     voices.forEach(([wave, ratio, mix]) => {
       const oscillator = context.createOscillator();
       oscillator.type = wave;
@@ -98,7 +107,18 @@
       partial.connect(envelope);
       oscillator.start(at);
       oscillator.stop(stopAt + .05);
-      if (liveSources) liveSources.push(oscillator);
+      if (liveSources) {
+        liveSources.push(oscillator);
+        oscillator.addEventListener('ended', () => {
+          try { oscillator.disconnect(); partial.disconnect(); } catch (_) {}
+          const sourceIndex = liveSources.indexOf(oscillator);
+          if (sourceIndex >= 0) liveSources.splice(sourceIndex, 1);
+          activeOscillators -= 1;
+          if (activeOscillators === 0) {
+            try { envelope.disconnect(); lowpass.disconnect(); panner.disconnect(); } catch (_) {}
+          }
+        }, { once: true });
+      }
       oscs.push(oscillator);
     });
     return oscs;
@@ -200,9 +220,11 @@
       if (this.bus && this.context) {
         const now = this.context.currentTime;
         this.bus.master.gain.cancelScheduledValues(now);
-        this.bus.master.gain.setTargetAtTime(0, now, .01);
+        this.bus.master.gain.setTargetAtTime(0, now, .025);
+        const oldBus = this.bus;
+        window.setTimeout(() => oldBus.disconnect(), 160);
       }
-      this.sources.forEach(osc => { try { osc.stop(); } catch (_) { /* already stopped */ } });
+      this.sources.forEach(osc => { try { osc.stop((this.context?.currentTime || 0) + .045); } catch (_) { /* already stopped */ } });
       this.sources = [];
       this.bus = null;
     }

@@ -17,12 +17,14 @@
 3. Pause, resume, Stop, and seek along the timeline.
 4. Select each algorithm and confirm that visuals and sound structure change.
 5. Try depths 1 and 8, tempos 40 and 160, and densities 1 and 10.
-6. Try all eight atmospheres (Calm, Dreamy, Deep Focus, Meditation, Ambient Drift, Nocturne, Cinematic, and Pulse) and all four instruments.
+6. Try all eight atmospheres (Calm, Dreamy, Deep Focus, Meditation, Ambient Drift, Nocturne, Cinematic, and Pulse) and all eight instrument voices.
 7. Change the scale and verify pitches remain tonal.
 8. Set volume to 0; confirm sound is silent. Restore volume.
 9. Export WAV; check it opens in an audio player and contains audible notes.
 10. Resize to tablet/mobile, use keyboard navigation, and enable Reduced Motion.
 11. Change configuration during playback and verify no old playback session remains active.
+12. Start playback and enter Bloom mode; confirm the composition continues, the canvas expands, and the minimal controls fade and return on pointer or keyboard activity.
+13. Adjust volume, pause/resume, enter/exit full screen, then exit Bloom mode with Escape; verify the normal studio controls return.
 
 ## Browser and operating conditions
 
@@ -46,7 +48,7 @@ Chrome, Edge and Firefox on desktop are suggested for the live demo. Audio permi
 - **WAV export:** Chromium generated a RIFF/WAVE file, decoded with Python's `wave` module as 2-channel, 44,100-Hz, 16-bit audio, with nonzero signal (peak ≈ 0.10, RMS ≈ 0.023) and no clipped samples for the tested short composition.
 - **Test environment note:** The sandbox's Chromium blocks navigation to `file://` and `localhost` by administrator policy, so the in-container browser tests injected the same HTML/CSS/JS contents into a Chromium page. This does not indicate ordinary browsers block opening `index.html`; direct file-opening on the user's machine has not been separately verified here.
 
-**Still recommended manually:** listen to each atmosphere with all four instruments using headphones, export a long composition, and check the target demo laptop/browser before submission.
+**Still recommended manually:** listen to each atmosphere with all eight instrument voices using headphones, export a long composition, and check the target demo laptop/browser before submission.
 
 
 ## Extension verification (2026-11-26)
@@ -69,3 +71,11 @@ The app needs no installation. Browser tests require Playwright and Google Chrom
 Automated checks validate audio content and signal bounds, not artistic listening quality. Listen with headphones at a comfortable volume to compare layering, disk-size melody, all instruments, and the full eight-disk resolution.
 
 Final edge checks: zero-volume export is digitally silent; Stop invalidates a pending asynchronous audio start. Koch normalized endpoint lengths preserve the equilateral construction without aspect distortion.
+
+## Verification (2026-11-26)
+
+- `node tests/verify.cjs`: PASS, 243 algorithm/scale/depth/density combinations.
+- `node tests/extensions.cjs`: PASS, 9,072 Koch/Hanoi geometry and composition combinations, including deterministic events, legal Hanoi moves, bounded duration/polyphony, and scale-safe pitches.
+- `node --check` passed for `app.js`, `audio.js`, `music.js`, and `visualization.js`.
+- Browser automation could not start in this environment: `tests/browser.cjs` requires Playwright; its fallback expects `TEMP` to point to the optional external verification folder, and `TEMP` is unset here. A visual browser check of Bloom mode remains manual.
+- The project is served as static files (`vercel.json` sets `buildCommand: null` and `outputDirectory: "."`), so there is no production build command. The JavaScript syntax and static resource checks are the applicable local checks.

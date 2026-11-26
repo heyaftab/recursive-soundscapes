@@ -3,16 +3,41 @@
   'use strict';
   const $ = (id) => document.getElementById(id);
   const state = { ...RS.defaults, variationIndex: 0 };
+  const settingsKey = 'recursive-soundscapes-settings';
+  let savedLoop = false;
+  function restoreSettings() {
+    try {
+      const saved = JSON.parse(localStorage.getItem(settingsKey) || 'null');
+      if (!saved || typeof saved !== 'object') return;
+      const choices = {
+        algorithm: Object.keys(RS.algorithmInfo), mood: Object.keys(RS.moods),
+        instrument: [...document.querySelectorAll('[data-instrument]')].map(item => item.dataset.instrument),
+        scale: Object.keys(RS.scales), kochMode: [...$('kochMode').options].map(option => option.value)
+      };
+      for (const [key, values] of Object.entries(choices)) if (values.includes(saved[key])) state[key] = saved[key];
+      const ranges = { depth: [1, 8], disks: [1, 8], tempo: [40, 160], density: [1, 10], branchAngle: [16, 50], branchLength: [60, 80], volume: [0, 100], seed: [0, 2147483647], variationIndex: [0, 2147483647] };
+      for (const [key, [min, max]] of Object.entries(ranges)) {
+        const value = Number(saved[key]);
+        if (Number.isFinite(value)) state[key] = Math.round(RS.clamp(value, min, max));
+      }
+      if (state.algorithm === 'koch') state.depth = Math.min(state.depth, 5);
+      savedLoop = saved.loop === true;
+      if (typeof saved.reducedMotion === 'boolean') state.reducedMotion = saved.reducedMotion;
+    } catch (_) { /* Use defaults when storage is unavailable or malformed. */ }
+  }
+  restoreSettings();
   let scene = null;
   let composition = null;
   let exporting = false;
   let toastTimer = null;
+  let relaxationTimer = null;
   const stage = new RS.VisualStage($('visualCanvas'));
   const audio = new RS.AudioEngine((position, event) => {
     stage.setActive(event?.sourceNodeId || null);
     stage.setPosition(position);
     updateAlgorithmProgress(position);
     updateTransport();
+    syncRelaxation(event);
     $('elapsed').textContent = RS.formatTime(position);
     $('timeline').value = composition?.duration ? Math.round(position / composition.duration * 1000) : 0;
     $('timeline').style.setProperty('--range-fill', `${composition?.duration ? position / composition.duration * 100 : 0}%`);
@@ -30,6 +55,11 @@
     if (error) toast(error.message, true);
     else if (!audio.loop) toast('Your composition has finished playing.');
   });
+  audio.loop = savedLoop;
+
+  function persistSettings() {
+    try { localStorage.setItem(settingsKey, JSON.stringify({ ...state, loop: audio.loop, reducedMotion: stage.reducedMotion })); } catch (_) { /* Storage may be disabled or full. */ }
+  }
 
   function updateAlgorithmProgress(position) {
     if(!scene || !composition)return;
@@ -57,6 +87,7 @@
   function setTheme(theme) {
     const isDark = theme === 'dark';
     document.documentElement.dataset.theme = isDark ? 'dark' : 'light';
+    try { localStorage.setItem('recursive-soundscapes-theme', isDark ? 'dark' : 'light'); } catch (_) { /* Storage may be disabled. */ }
     $('themeButton').setAttribute('aria-label', `Switch to ${isDark ? 'light' : 'dark'} theme`);
     $('themeButton').setAttribute('title', `Switch to ${isDark ? 'light' : 'dark'} theme`);
     $('moonIcon').toggleAttribute('hidden', !isDark);
@@ -73,6 +104,50 @@
     $('playingEyebrow').textContent = playing ? 'NOW PLAYING' : 'YOUR COMPOSITION';
     document.body.classList.toggle('is-playing', playing);
     stage.setPlaying(playing);
+    $('relaxPlayIcon').hidden = playing;
+    $('relaxPauseIcon').hidden = !playing;
+    $('relaxPlayButton').setAttribute('aria-label', playing ? 'Pause playback' : 'Resume playback');
+    $('relaxPlayButton').setAttribute('title', playing ? 'Pause playback' : 'Resume playback');
+  }
+  function syncRelaxation(event) {
+    $('relaxTrackTitle').textContent = $('trackTitle').textContent;
+    $('relaxTrackDetail').textContent = event
+      ? `${RS.noteName(event.pitch)} · ${event.sourceNodeId.replace(/^\w-/, '#')} · following the recursive shape`
+      : 'Follow the shape as it unfolds';
+    $('relaxVolume').value = state.volume;
+    $('relaxVolumeValue').textContent = `${state.volume}%`;
+  }
+  function resetRelaxationFade() {
+    const controls = $('relaxationControls');
+    if (controls.hidden || !document.body.classList.contains('immersive-mode')) return;
+    controls.classList.remove('is-faded');
+    clearTimeout(relaxationTimer);
+    if (controls.contains(document.activeElement)) return;
+    relaxationTimer = window.setTimeout(() => {
+      if (!controls.contains(document.activeElement) && document.body.classList.contains('immersive-mode')) controls.classList.add('is-faded');
+    }, 4500);
+  }
+  function enterRelaxation() {
+    document.body.classList.add('immersive-mode');
+    stage.setImmersive(true);
+    $('relaxationControls').hidden = false;
+    $('relaxButton').setAttribute('aria-pressed', 'true');
+    $('relaxButton').setAttribute('aria-label', 'Exit Bloom mode');
+    syncRelaxation(audio.getActiveEvent(audio.position()));
+    resetRelaxationFade();
+  }
+  function exitRelaxation(exitFullscreen = true) {
+    clearTimeout(relaxationTimer);
+    document.body.classList.remove('immersive-mode');
+    stage.setImmersive(false);
+    $('relaxationControls').hidden = true;
+    $('relaxationControls').classList.remove('is-faded');
+    $('relaxButton').setAttribute('aria-pressed', 'false');
+    $('relaxButton').setAttribute('aria-label', 'Start playback in Bloom mode');
+    if (exitFullscreen && (document.fullscreenElement || document.webkitFullscreenElement)) {
+      const leaveFullscreen = document.exitFullscreen || document.webkitExitFullscreen;
+      leaveFullscreen?.call(document);
+    }
   }
   function writeSlider(id, suffix = '') {
     const node = $(id);
@@ -103,8 +178,6 @@
       stage.setScene(scene, composition);
       updateTransport();
       const info = RS.algorithmInfo[state.algorithm];
-      $('vizTitle').textContent = info.title;
-      $('vizSubtitle').textContent = info.subtitle;
       $('figureNumber').textContent = info.figure;
       $('recursionDescription').textContent = info.description;
       $('mappingDescription').textContent = info.mapping;
@@ -130,6 +203,7 @@
       $('loopButton').setAttribute('aria-pressed', String(audio.loop));
       $('loopButton').classList.toggle('active', audio.loop);
       $('generateButton').classList.remove('generating');
+      persistSettings();
       if (newVariation) toast('New recursive variation generated.');
     } catch (error) {
       toast(`Could not generate: ${error.message}`, true);
@@ -201,22 +275,74 @@
   setupScrollIndicator(document.getElementById('instrumentOptions'), document.querySelector('.instrument-scrollbar'));
   setupScrollIndicator(document.getElementById('scaleOptions'), document.querySelector('.scale-scrollbar'));
   ['depth', 'disks', 'tempo', 'density', 'branchAngle', 'branchLength', 'volume'].forEach(id => {
+    $(id).value = state[id];
     writeSlider(id, id === 'branchAngle' ? '°' : id === 'branchLength' || id === 'volume' ? '%' : '');
     $(id).addEventListener('input', () => {
       writeSlider(id, id === 'branchAngle' ? '°' : id === 'branchLength' || id === 'volume' ? '%' : '');
-      if (id === 'volume') audio.setVolume(state.volume);
+      if (id === 'volume') { audio.setVolume(state.volume); syncRelaxation(audio.getActiveEvent(audio.position())); persistSettings(); }
     });
     if (id !== 'volume') $(id).addEventListener('change', () => generate());
   });
+  $('kochMode').value = state.kochMode;
   ['kochMode'].forEach(id => $(id).addEventListener('change', () => { state[id] = $(id).value; generate(); }));
   $('generateButton').addEventListener('click', () => generate(true));
+  $('resetButton').addEventListener('click', () => {
+    Object.assign(state, RS.defaults, { variationIndex: 0 });
+    audio.loop = false;
+    setTheme('dark');
+    stage.setReducedMotion(window.matchMedia?.('(prefers-reduced-motion: reduce)').matches || false);
+    $('reducedMotion').checked = stage.reducedMotion;
+    for (const id of ['depth', 'disks', 'tempo', 'density', 'branchAngle', 'branchLength', 'volume']) {
+      $(id).value = state[id];
+      writeSlider(id, id === 'branchAngle' ? '°' : id === 'branchLength' || id === 'volume' ? '%' : '');
+    }
+    $('kochMode').value = state.kochMode;
+    generate();
+    toast('Studio settings reset to defaults.');
+  });
   $('themeButton').addEventListener('click', () => {
     setTheme(document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark');
   });
-  setTheme('dark');
+  $('relaxButton').addEventListener('click', async () => {
+    if (document.body.classList.contains('immersive-mode')) { exitRelaxation(); return; }
+    try {
+      if (!audio.playing) await audio.play();
+      enterRelaxation();
+    } catch (error) { toast(error.message || 'Could not start Bloom mode.', true); }
+  });
+  $('exitRelaxation').addEventListener('click', () => exitRelaxation());
+  $('relaxPlayButton').addEventListener('click', async () => {
+    try {
+      if (audio.playing) audio.pause(); else await audio.play();
+      updateTransport();
+      resetRelaxationFade();
+    } catch (error) { toast(error.message || 'Could not start playback.', true); }
+  });
+  $('relaxVolume').addEventListener('input', () => {
+    $('volume').value = $('relaxVolume').value;
+    writeSlider('volume', '%');
+    audio.setVolume(state.volume);
+    syncRelaxation(audio.getActiveEvent(audio.position()));
+    resetRelaxationFade();
+  });
+  $('relaxationControls').addEventListener('pointermove', resetRelaxationFade, { passive: true });
+  $('relaxationControls').addEventListener('touchstart', resetRelaxationFade, { passive: true });
+  $('relaxationControls').addEventListener('focusin', () => {
+    clearTimeout(relaxationTimer);
+    $('relaxationControls').classList.remove('is-faded');
+  });
+  $('relaxationControls').addEventListener('focusout', () => window.setTimeout(resetRelaxationFade, 0));
+  document.addEventListener('pointermove', resetRelaxationFade, { passive: true });
+  let savedTheme = 'dark';
+  try {
+    const storedTheme = localStorage.getItem('recursive-soundscapes-theme');
+    if (storedTheme === 'light' || storedTheme === 'dark') savedTheme = storedTheme;
+  } catch (_) { /* Keep the default theme when storage is unavailable. */ }
+  setTheme(savedTheme);
+  if (typeof state.reducedMotion === 'boolean') stage.setReducedMotion(state.reducedMotion);
   $('reducedMotion').checked = stage.reducedMotion;
-  $('reducedMotion').addEventListener('change', () => stage.setReducedMotion($('reducedMotion').checked));
-  $('loopButton').addEventListener('click', () => { audio.loop = !audio.loop; $('loopButton').setAttribute('aria-pressed', String(audio.loop)); $('loopButton').classList.toggle('active', audio.loop); toast(audio.loop ? 'Loop enabled.' : 'Loop disabled.'); });
+  $('reducedMotion').addEventListener('change', () => { stage.setReducedMotion($('reducedMotion').checked); persistSettings(); });
+  $('loopButton').addEventListener('click', () => { audio.loop = !audio.loop; $('loopButton').setAttribute('aria-pressed', String(audio.loop)); $('loopButton').classList.toggle('active', audio.loop); persistSettings(); toast(audio.loop ? 'Loop enabled.' : 'Loop disabled.'); });
   $('playButton').addEventListener('click', async () => {
     try {
       if (audio.playing) audio.pause(); else await audio.play();
@@ -261,6 +387,13 @@
   $('dialogStart').addEventListener('click', () => help.close());
   help.addEventListener('click', e => { if (e.target === help) help.close(); });
   document.addEventListener('keydown', event => {
+    if (event.key === 'Escape' && document.body.classList.contains('immersive-mode')) {
+      if (document.fullscreenElement || document.webkitFullscreenElement) return;
+      event.preventDefault();
+      exitRelaxation();
+      return;
+    }
+    if (document.body.classList.contains('immersive-mode')) resetRelaxationFade();
     if (event.code === 'Space' && !['INPUT', 'BUTTON', 'SELECT', 'TEXTAREA'].includes(document.activeElement?.tagName) && !help.open) {
       event.preventDefault(); $('playButton').click();
     }

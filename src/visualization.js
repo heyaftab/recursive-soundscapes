@@ -10,6 +10,7 @@
       this.activeId = null;
       this.activeSince = 0;
       this.playing = false;
+      this.immersive = false;
       this.reducedMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches || false;
       this.sceneLayer = document.createElement('canvas');
       this.layerCtx = this.sceneLayer.getContext('2d');
@@ -26,6 +27,7 @@
     setPosition(position) { this.position = position; }
     setScene(scene, composition) {
       this.composition=composition; this.position=0; this.kochPaths=new Map();
+      this.melodyEvents=composition.events.filter(event=>event.kind==='melody');
       this.scene = scene;
       this.nodeMap = new Map(scene.nodes.map(n => [n.id, n]));
       this.activeId = null;
@@ -39,6 +41,10 @@
       if (id !== this.activeId) { this.activeId = id; this.activeSince = performance.now(); }
     }
     setPlaying(playing) { this.playing = playing; }
+    setImmersive(value) {
+      this.immersive = Boolean(value);
+      this.renderStatic();
+    }
     setReducedMotion(value) { this.reducedMotion = value; }
     resize() {
       const rect = this.canvas.getBoundingClientRect();
@@ -51,8 +57,20 @@
       this.kochPaths=new Map();
       this.renderStatic();
     }
-    coordX(x) { return x * this.width; }
-    coordY(y) { return y * this.height; }
+    coordX(x) { return this.width * (.5 + (x - .5) * .78); }
+    coordY(y) { return this.height * (.5 + (y - .5) * .9); }
+    fibonacciX(x) { return this.coordX(x); }
+    fibonacciY(y) { return this.coordY(y); }
+    traversalX(x) {
+      if(this.scene?.algorithm!=='koch')return this.coordX(x);
+      const size=Math.min(this.width,this.height)*.95*.78;
+      return this.width/2+(x-.5)*size;
+    }
+    traversalY(y) {
+      if(this.scene?.algorithm!=='koch')return this.coordY(y);
+      const size=Math.min(this.width,this.height)*.95*.78;
+      return this.coordY(.46+(y-.5)*size/this.height);
+    }
     setup(ctx) { ctx.setTransform(this.dpr, 0, 0, this.dpr, 0, 0); }
     background(ctx) {
       const w = this.width, h = this.height;
@@ -63,11 +81,14 @@
       grd.addColorStop(1, dark ? '#09101d' : '#eaf0f7');
       ctx.fillStyle = grd; ctx.fillRect(0, 0, w, h);
       ctx.strokeStyle = dark ? 'rgba(126,155,195,.055)' : 'rgba(91,115,148,.09)'; ctx.lineWidth = 1;
-      for (let x = 0; x < w; x += 35) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, h); ctx.stroke(); }
-      for (let y = 0; y < h; y += 35) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(w, y); ctx.stroke(); }
+      if (!this.immersive) {
+        for (let x = 0; x < w; x += 35) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, h); ctx.stroke(); }
+        for (let y = 0; y < h; y += 35) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(w, y); ctx.stroke(); }
+      }
       // Fixed background particles (rather than random on each frame) avoid flicker.
       let seed = 3;
-      for (let i = 0; i < 80; i++) {
+      const particleCount = this.immersive ? 44 : 80;
+      for (let i = 0; i < particleCount; i++) {
         seed = (seed * 1664525 + 1013904223) >>> 0;
         const x = (seed / 4294967296) * w;
         seed = (seed * 1664525 + 1013904223) >>> 0;
@@ -82,8 +103,6 @@
       for (const r of [radius * .57, radius, radius * 1.4]) {
         ctx.beginPath(); ctx.ellipse(w / 2, h / 2, r, r * .80, 0, 0, 2 * Math.PI); ctx.stroke();
       }
-      ctx.fillStyle = dark ? 'rgba(114,181,204,.06)' : 'rgba(68,99,128,.34)';
-      ctx.font = '12px monospace'; ctx.fillText('0,0', 17, 19);
     }
     trianglePath(ctx, pts) {
       ctx.beginPath(); ctx.moveTo(this.coordX(pts[0].x), this.coordY(pts[0].y));
@@ -105,25 +124,27 @@
           ctx.strokeStyle = dark
             ? `rgba(101,231,239,${.12 + (i / nodes.length) * .42})`
             : `rgba(8,127,145,${.18 + (i / nodes.length) * .48})`;
-          ctx.beginPath(); ctx.moveTo(this.coordX(prev.x), this.coordY(prev.y));
-          ctx.quadraticCurveTo(this.coordX(.5 + (prev.x + n.x - 1) * .42), this.coordY(.5 + (prev.y + n.y - 1) * .42), this.coordX(n.x), this.coordY(n.y)); ctx.stroke();
+          ctx.beginPath(); ctx.moveTo(this.fibonacciX(prev.x), this.fibonacciY(prev.y));
+          ctx.quadraticCurveTo(this.fibonacciX(.5 + (prev.x + n.x - 1) * .42), this.fibonacciY(.5 + (prev.y + n.y - 1) * .42), this.fibonacciX(n.x), this.fibonacciY(n.y)); ctx.stroke();
         }
         nodes.forEach((n, i) => {
-          const x = this.coordX(n.x), y = this.coordY(n.y);
+          const x = this.fibonacciX(n.x), y = this.fibonacciY(n.y);
           ctx.fillStyle = dark
             ? (i % 5 === 0 ? 'rgba(178,148,246,.9)' : 'rgba(112,236,241,.65)')
             : (i % 5 === 0 ? 'rgba(118,85,189,.9)' : 'rgba(8,127,145,.76)');
           ctx.beginPath(); ctx.arc(x, y, i % 5 === 0 ? 3.6 : 2.4, 0, 2 * Math.PI); ctx.fill();
-          if (i % 5 === 0 || i === nodes.length - 1) {
+          if (!this.immersive && (i % 5 === 0 || i === nodes.length - 1)) {
             ctx.font = '13px ui-monospace, monospace';
             ctx.fillStyle = dark ? 'rgba(201,222,248,.72)' : 'rgba(49,67,91,.76)';
             ctx.fillText(`F${i}`, x + 8, y - 9);
           }
         });
         // Gentle central Fibonacci notation makes the connection legible before playback.
-        ctx.textAlign = 'center'; ctx.font = '14px ui-monospace, monospace';
-        ctx.fillStyle = dark ? 'rgba(133,199,215,.4)' : 'rgba(46,111,130,.48)';
-        ctx.fillText('F(n) = F(n−1) + F(n−2)', this.width / 2, this.height * .91); ctx.textAlign = 'left';
+        if (!this.immersive) {
+          ctx.textAlign = 'center'; ctx.font = '14px ui-monospace, monospace';
+          ctx.fillStyle = dark ? 'rgba(133,199,215,.4)' : 'rgba(46,111,130,.48)';
+          ctx.fillText('F(n) = F(n−1) + F(n−2)', this.width / 2, this.height * .91); ctx.textAlign = 'left';
+        }
       } else if (this.scene.algorithm === 'sierpinski') {
         ctx.strokeStyle = dark ? 'rgba(101,231,239,.09)' : 'rgba(8,127,145,.18)'; ctx.lineWidth = 1;
         const leaves = nodes.filter(n => n.leaf);
@@ -162,8 +183,8 @@
       const level=iteration.depth;
       let progress=this.reducedMotion?1:RS.clamp((this.position-iteration.time)/Math.min(.65,iteration.duration*.6),0,1);
       progress=progress*progress*(3-2*progress);
-      const size=Math.min(this.width,this.height)*.95;
-      const x=v=>this.width/2+(v-.5)*size,y=v=>this.height*.46+(v-.5)*size;
+      const size=Math.min(this.width,this.height)*.95*.78;
+      const x=v=>this.width/2+(v-.5)*size,y=v=>this.coordY(.46+(v-.5)*size/this.height);
       const colors=this.theme==='dark'?['#65e7ef','#88d8ed','#a78bfa','#c29cf5','#f0a5e8','#c3dbf8']:['#087f91','#247eaa','#7655bd','#975cac','#b34f9f','#476c9b'];
       let cached=this.kochPaths.get(level);
       if(progress===1 && !cached){
@@ -191,27 +212,28 @@
       const move=event?this.nodeMap.get(event.sourceNodeId):null;
       const progress=event?RS.clamp((this.position-event.time)/event.moveDuration,0,1):0;
       const pegs=move?(progress>=1?move.after:move.before):this.scene.initial;
-      const w=this.width,h=this.height,base=h*.76,diskH=Math.min(23,h*.045),pegX=[w*.2,w*.5,w*.8];
+      const w=this.width,h=this.height,base=this.coordY(.76),diskH=Math.min(26,h*.05),pegX=[this.coordX(.2),this.coordX(.5),this.coordX(.8)];
       const dark=this.theme==='dark';
       ctx.strokeStyle=dark?'#667897':'#8191aa';ctx.lineWidth=5;ctx.lineCap='round';
       for(let i=0;i<3;i++){
-        ctx.beginPath();ctx.moveTo(pegX[i],base);ctx.lineTo(pegX[i],h*.24);ctx.stroke();
-        ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(pegX[i]-w*.12,base+diskH);ctx.lineTo(pegX[i]+w*.12,base+diskH);ctx.stroke();
+        ctx.beginPath();ctx.moveTo(pegX[i],base);ctx.lineTo(pegX[i],this.coordY(.24));ctx.stroke();
+        ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(pegX[i]-w*.135*.78,base+diskH);ctx.lineTo(pegX[i]+w*.135*.78,base+diskH);ctx.stroke();
         ctx.font='13px ui-monospace,monospace';ctx.textAlign='center';ctx.fillStyle=dark?'#a9b7d0':'#46546a';ctx.fillText(['LEFT','MIDDLE','RIGHT'][i],pegX[i],base+diskH+25);
       }
       const disk=(size,x,y,active=false)=>{
-        const width=w*(.065+.17*size/this.scene.disks);
+        const width=w*(.08+.18*size/this.scene.disks)*.78;
         ctx.save();ctx.fillStyle=(dark?['#65e7ef','#a78bfa','#f0a5e8']:['#087f91','#7655bd','#b34f9f'])[(size-1)%3];
         if(active){ctx.shadowColor='#f0a5e8';ctx.shadowBlur=this.reducedMotion?0:18;}
-        ctx.beginPath();ctx.roundRect(x-width/2,y-diskH/2,width,diskH-3,5);ctx.fill();
-        ctx.fillStyle=dark?'#111929':'#fff';ctx.font='bold 13px ui-monospace,monospace';ctx.textAlign='center';ctx.fillText(String(size),x,y+3);ctx.restore();
+        ctx.beginPath();ctx.roundRect(x-width/2,y-diskH/2,width,diskH-2,6);ctx.fill();
+        ctx.shadowBlur=0;ctx.strokeStyle=dark?'rgba(255,255,255,.42)':'rgba(255,255,255,.68)';ctx.lineWidth=1;ctx.stroke();
+        ctx.fillStyle=dark?'#111929':'#fff';ctx.font='bold 14px ui-monospace,monospace';ctx.textAlign='center';ctx.fillText(String(size),x,y+4);ctx.restore();
       };
       for(let peg=0;peg<3;peg++)pegs[peg].forEach((size,level)=>{
         if(move&&progress<1&&peg===move.from&&size===move.disk)return;
         disk(size,pegX[peg],base-level*diskH,move&&progress>=1&&size===move.disk&&peg===move.to&&this.position<event.time+event.moveDuration+.2);
       });
       if(move&&progress<1){
-        const startY=base-move.sourceHeight*diskH,endY=base-move.destinationHeight*diskH,top=h*.18;
+        const startY=base-move.sourceHeight*diskH,endY=base-move.destinationHeight*diskH,top=this.coordY(.18);
         let x=pegX[move.from],y=startY;
         if(this.reducedMotion){x=pegX[move.to];y=endY;}
         else if(progress<.25)y=startY+(top-startY)*(progress/.25);
@@ -223,9 +245,51 @@
       if(this.position>=end){
         ctx.save();ctx.strokeStyle=dark?'#65e7ef':'#087f91';ctx.lineWidth=2;
         const phase=this.reducedMotion?0:Math.min(1,(this.position-end)/1.5);
-        ctx.globalAlpha=1-phase*.65;ctx.beginPath();ctx.ellipse(pegX[2],h*.46,w*(.13+phase*.04),h*(.31+phase*.04),0,0,Math.PI*2);ctx.stroke();ctx.restore();
+        ctx.globalAlpha=1-phase*.65;ctx.beginPath();ctx.ellipse(pegX[2],this.coordY(.46),w*(.13+phase*.04)*.78,h*(.31+phase*.04)*.9,0,0,Math.PI*2);ctx.stroke();ctx.restore();
       }
       ctx.textAlign='left';
+    }
+    drawTraversalBall(ctx) {
+      const events=this.melodyEvents||[];
+      if(!events.length)return;
+      const position=this.position||0;
+      const center={x:.5,y:this.scene.algorithm==='koch' ? .46 : .5};
+      if(!this.playing&&position<=0){this.drawBallAt(ctx,center);return;}
+      const launchDuration=Math.min(.32,Math.max(.06,((events[1]?.time||.6)-events[0].time)*.45));
+      const launching=position<launchDuration;
+      let nextIndex=events.findIndex(event=>event.time>position);
+      if(nextIndex<0)nextIndex=events.length;
+      const returningToCenter=nextIndex===events.length;
+      const fromEvent=events[Math.max(0,nextIndex-1)],toEvent=events[Math.min(events.length-1,nextIndex)];
+      const fromNode=this.nodeMap.get(fromEvent.sourceNodeId),toNode=this.nodeMap.get(toEvent.sourceNodeId);
+      const from=launching?center:this.traversalPoint(fromNode);
+      const to=launching?this.traversalPoint(this.nodeMap.get(events[0].sourceNodeId)):returningToCenter?center:this.traversalPoint(toNode);
+      if(!from||!to)return;
+      const segmentStart=nextIndex===1&&!launching?launchDuration:fromEvent.time;
+      const span=launching?launchDuration:returningToCenter?1.35:toEvent.time-segmentStart;
+      const progress=this.reducedMotion?(launching||returningToCenter?1:0):span<=0?0:RS.clamp((position-(launching?0:segmentStart))/span,0,1);
+      const controlX=this.scene.algorithm==='fibonacci' ? .5+(from.x+to.x-1)*.42 : (from.x+to.x)/2;
+      const controlY=this.scene.algorithm==='fibonacci' ? .5+(from.y+to.y-1)*.42 : (from.y+to.y)/2-.06;
+      const inverse=1-progress;
+      let x=inverse*inverse*from.x+2*inverse*progress*controlX+progress*progress*to.x;
+      let y=inverse*inverse*from.y+2*inverse*progress*controlY+progress*progress*to.y;
+      if(!this.reducedMotion)y-=Math.sin(Math.PI*progress)*(this.scene.algorithm==='fibonacci' ? .035 : .022);
+      this.drawBallAt(ctx,{x,y});
+    }
+    traversalPoint(node) {
+      if(!node)return null;
+      if(this.scene.algorithm==='tree')return node.depth===0?{x:node.x1,y:node.y1}:{x:node.x2,y:node.y2};
+      if(this.scene.algorithm==='koch')return {x:(node.x1+node.x2)/2,y:(node.y1+node.y2)/2};
+      return {x:node.x,y:node.y};
+    }
+    drawBallAt(ctx,point) {
+      const x=this.traversalX(point.x),y=this.traversalY(point.y);
+      ctx.save();
+      ctx.shadowColor='#8b72d4';ctx.shadowBlur=this.reducedMotion?5:15;
+      const ball=ctx.createRadialGradient(x-2,y-2,1,x,y,7);
+      ball.addColorStop(0,'#ffffff');ball.addColorStop(.35,'#a8f4ef');ball.addColorStop(1,'#8d73d5');
+      ctx.fillStyle=ball;ctx.beginPath();ctx.arc(x,y,6,0,Math.PI*2);ctx.fill();
+      ctx.restore();
     }
     drawFrame(timestamp) {
       this.frameId = requestAnimationFrame(this._drawFrame);
@@ -235,9 +299,12 @@
       ctx.clearRect(0, 0, this.width, this.height);
       ctx.drawImage(this.sceneLayer, 0, 0, this.width, this.height);
       if(this.scene.algorithm==='hanoi'){this.drawHanoi(ctx);return;}
-      if(this.scene.algorithm==='koch'){this.drawKoch(ctx);return;}
+      if(this.scene.algorithm==='koch'){this.drawKoch(ctx);this.drawTraversalBall(ctx);return;}
       const n = this.nodeMap.get(this.activeId);
-      if (!n) return;
+      if (!n) {
+        if(['fibonacci','sierpinski','tree'].includes(this.scene.algorithm))this.drawTraversalBall(ctx);
+        return;
+      }
       const age = Math.min(1, (timestamp - this.activeSince) / 900);
       const intensity = this.reducedMotion ? .75 : 1 - age * .46;
       ctx.save();
@@ -254,7 +321,7 @@
         const activeY = n.depth === 0 ? n.y1 : n.y2;
         ctx.beginPath(); ctx.arc(this.coordX(activeX), this.coordY(activeY), 3.3, 0, Math.PI * 2); ctx.fillStyle = '#d5bcff'; ctx.fill();
       } else {
-        const x = this.coordX(n.x), y = this.coordY(n.y);
+        const x = this.fibonacciX(n.x), y = this.fibonacciY(n.y);
         ctx.fillStyle = '#d5bcff'; ctx.beginPath(); ctx.arc(x, y, 5.2, 0, Math.PI * 2); ctx.fill();
         ctx.strokeStyle = `rgba(189,151,255,${.7 * intensity})`; ctx.lineWidth = 1.2;
         ctx.beginPath(); ctx.arc(x, y, this.reducedMotion ? 12 : 11 + age * 23, 0, Math.PI * 2); ctx.stroke();
@@ -264,6 +331,7 @@
         ctx.beginPath(); ctx.arc(this.coordX(n.x), this.coordY(n.y), 10 + age * 19, 0, Math.PI * 2); ctx.stroke();
       }
       ctx.restore();
+      if(['fibonacci','sierpinski','tree'].includes(this.scene.algorithm))this.drawTraversalBall(ctx);
     }
     destroy() {
       cancelAnimationFrame(this.frameId);

@@ -54,7 +54,7 @@ python -m http.server 8000
 
 ### 🎼 Sound
 - 🌀🔺🌳 Fibonacci, Sierpinski triangle, recursive tree
-- 🎭 **8 atmospheres** and **4 synthesizer voices**
+- 🎭 **8 atmospheres** and **8 synthesizer voices**
 - 🎹 **9 tonal scales**
 - 🔊 Master volume, stereo panning, reverb and delay
 - 💿 Offline-rendered **stereo 16-bit PCM WAV**
@@ -64,6 +64,7 @@ python -m http.server 8000
 
 ### 🎨 Visuals & Control
 - ✨ Real-time synchronized active-node highlighting
+- 🌸 Bloom mode with full-screen listening and minimal playback controls
 - ▶️ ⏸️ ⏹️ Play, pause, stop, loop, seek, regenerate
 - 🌿 Tree angle and branch-length controls
 - 📱 Responsive layouts and keyboard input
@@ -92,7 +93,7 @@ python -m http.server 8000
 | Recursion depth 1–8, tempo 40–160 BPM, density 1–10 | ✅ |
 | Algorithm-specific tree angle and branch-length controls | ✅ |
 | Shared algorithm → music timeline → visualization | ✅ |
-| Eight distinct sound atmospheres and four synthesizer voices | ✅ |
+| Eight distinct sound atmospheres and eight synthesizer voices | ✅ |
 | Nine tonal scales | ✅ |
 | Play, pause, stop, loop, seek, regenerate | ✅ |
 | Real-time synchronized active-node highlighting | ✅ |
@@ -244,7 +245,7 @@ Project source created for the user. The original procedural music is synthesize
 4. **Koch Snowflake / Curve:** choose an equilateral triangle or straight line. Each segment recursively becomes four. Playback morphs through every iteration; orientation selects scale notes, segment length sets bounded note duration, and horizontal position pans the sound. Successive iterations rise through octave layers, with selected lower-register echoes. Upper layers share a capped register to keep the sound comfortable.
 5. **Towers of Hanoi (experimental):** a complete recursive solution on three pegs. Larger disks sound lower notes, each destination selects pan (-0.8, 0, +0.8), and recursion depth colors the timbre. Every move is retained in order, including all 255 moves at eight disks.
 
-Only relevant controls appear: Koch mode and depth 1-5, Hanoi disks 1-8, or tree geometry. All algorithms retain tempo, density, nine scales, eight atmospheres (Calm, Dreamy, Deep Focus, Meditation, Ambient Drift, Nocturne, Cinematic, and Pulse), instrument selection, volume, looping, seek, regenerate, reduced motion, and stereo WAV export. The studio starts in its dark theme and retains the light-theme toggle.
+Only relevant controls appear: Koch mode and depth 1-5, Hanoi disks 1-8, or tree geometry. All algorithms retain tempo, density, nine scales, eight atmospheres (Calm, Dreamy, Deep Focus, Meditation, Ambient Drift, Nocturne, Cinematic, and Pulse), eight synthesizer voices (Soft Keys, Glass Bells, Warm Analog Pad, Plucked Strings, Wooden Marimba, Soft Choir, Air Flute, and Velvet Strings), volume, looping, seek, regenerate, reduced motion, and stereo WAV export. The studio starts in its dark theme and retains the light-theme toggle.
 
 ### Geometry, timing, and sound limits
 

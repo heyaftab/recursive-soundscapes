@@ -44,7 +44,7 @@
       id:kind+'-'+node.id+'-'+events.length,time,pitch:safePitch(pitch),duration,velocity:velocity*mood.velocity*(.92+((Math.imul(s.seed+node.index+1,16807)>>>0)%17)/100),
       depth:node.depth,pan:node.pan,sourceNodeId:node.id,kind,layer:node.depth,
       release:Math.min(mood.release,kind==='melody'?.8:1.2),
-      voice:kind==='melody'&&node.depth>0&&node.depth%3===0?'bell':s.instrument
+      voice:s.instrument
     });
     if(scene.algorithm==='koch'){
       let cursor=0;
@@ -106,6 +106,7 @@
     // Variation is a bounded scale-degree shift per phrase, never unrelated random notes.
     // The recursive node remains the foundation of every pitch.
     const phraseVariations = Array.from({ length: 20 }, () => Math.floor(random() * 3) - 1);
+    const chordProgression = [0, 3, 4, 2];
 
     for (let i = 0; i < count; i++) {
       const relative = count === 1 ? 0 : i / (count - 1);
@@ -140,12 +141,13 @@
       const velocity = Math.min(.8, (.30 + .11 * variation + (i % 8 === 0 ? .085 : 0)) * mood.velocity);
       const pan = RS.clamp(node.pan || 0, -.85, .85);
       events.push({ id: `ev-${i}`, time, pitch, duration, velocity, depth: node.depth, pan, sourceNodeId: node.id, kind: 'melody' });
-      // Additional voices are harmonically derived from the exact same recursive node.
+      // A slow root–fourth–fifth–third cycle gives each phrase a stable harmonic home.
       if (i % mood.padEvery === 0) {
-        const padPitch = toneFromIndex(degree - 2, scale, -1);
+        const chordRoot = chordProgression[Math.floor(i / 8) % chordProgression.length] + variationShift;
+        const padPitch = toneFromIndex(chordRoot, scale, -1);
         events.push({ id: `pad-${i}`, time, pitch: padPitch, duration: Math.min(5, secondsPerBeat * (s.mood === 'meditation' ? 5.5 : 4.1)), velocity: .19 * mood.velocity, depth: node.depth, pan: pan * .4, sourceNodeId: node.id, kind: 'pad' });
         if (['dreamy', 'meditation', 'ambient', 'nocturne', 'cinematic'].includes(s.mood)) {
-          events.push({ id: `harm-${i}`, time: time + .09, pitch: toneFromIndex(degree + 2, scale, -1), duration: Math.min(5, secondsPerBeat * 4.3), velocity: .12 * mood.velocity, depth: node.depth, pan: -pan * .35, sourceNodeId: node.id, kind: 'pad' });
+          events.push({ id: `harm-${i}`, time: time + .09, pitch: toneFromIndex(chordRoot + 2, scale, -1), duration: Math.min(5, secondsPerBeat * 4.3), velocity: .12 * mood.velocity, depth: node.depth, pan: -pan * .35, sourceNodeId: node.id, kind: 'pad' });
         }
       }
       if (i % 12 === 0 && !['meditation', 'ambient', 'nocturne'].includes(s.mood)) {
