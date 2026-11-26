@@ -43,9 +43,9 @@
     const delaySend = context.createGain();
     delaySend.gain.value = mood.delay;
     const delay = context.createDelay(1.2);
-    delay.delayTime.value = .345;
+    delay.delayTime.value = mood.delayTime || .345;
     const feedback = context.createGain();
-    feedback.gain.value = .17;
+    feedback.gain.value = mood.feedback ?? .17;
     input.connect(delaySend);
     delaySend.connect(delay);
     delay.connect(feedback);

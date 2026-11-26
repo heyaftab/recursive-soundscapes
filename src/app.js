@@ -2,7 +2,7 @@
 (function (RS) {
   'use strict';
   const $ = (id) => document.getElementById(id);
-  const state = { ...RS.defaults };
+  const state = { ...RS.defaults, variationIndex: 0 };
   let scene = null;
   let composition = null;
   let exporting = false;
@@ -91,7 +91,10 @@
   }
   function generate(newVariation = false) {
     try {
-      if (newVariation) state.seed += 137 + Math.floor(Math.random() * 997);
+      if (newVariation) {
+        state.variationIndex += 1;
+        state.seed += 137 + Math.floor(Math.random() * 997);
+      }
       const result = RS.generateScene(state);
       const music = RS.makeComposition(result, state);
       scene = result;
@@ -122,6 +125,8 @@
       $('treeControls').hidden = state.algorithm !== 'tree';
       selectOptions('[data-algorithm]', 'algorithm', state.algorithm);
       selectOptions('[data-mood]', 'mood', state.mood);
+      selectOptions('[data-instrument]', 'instrument', state.instrument);
+      selectOptions('[data-scale]', 'scale', state.scale);
       $('loopButton').setAttribute('aria-pressed', String(audio.loop));
       $('loopButton').classList.toggle('active', audio.loop);
       $('generateButton').classList.remove('generating');
@@ -148,6 +153,53 @@
     generate(); // mood change takes effect without requiring a different algorithm
     toast(`${RS.moods[state.mood].name} soundscape selected.`);
   }));
+  document.querySelectorAll('[data-instrument]').forEach(button => button.addEventListener('click', () => {
+    if (state.instrument === button.dataset.instrument) return;
+    state.instrument = button.dataset.instrument;
+    generate();
+    toast(`${button.querySelector('strong').textContent} selected.`);
+  }));
+  document.querySelectorAll('[data-scale]').forEach(button => button.addEventListener('click', () => {
+    if (state.scale === button.dataset.scale) return;
+    state.scale = button.dataset.scale;
+    generate();
+    toast(`${RS.scales[state.scale].name} selected.`);
+  }));
+  function setupScrollIndicator(container, track) {
+    const thumb = track.querySelector('span');
+    function update() {
+      const maxScroll = container.scrollHeight - container.clientHeight;
+      const size = container.scrollHeight ? Math.min(100, container.clientHeight / container.scrollHeight * 100) : 100;
+      thumb.style.height = size + '%';
+      thumb.style.top = (maxScroll > 0 ? container.scrollTop / maxScroll * (track.clientHeight - thumb.offsetHeight) : 0) + 'px';
+      track.hidden = maxScroll <= 0;
+      track.setAttribute('aria-valuenow', String(maxScroll > 0 ? Math.round(container.scrollTop / maxScroll * 100) : 0));
+    }
+    container.addEventListener('scroll', update, { passive: true });
+    track.addEventListener('pointerdown', event => {
+      const rect = track.getBoundingClientRect();
+      container.scrollTop = Math.max(0, Math.min(1, (event.clientY - rect.top) / rect.height)) * (container.scrollHeight - container.clientHeight);
+      track.setPointerCapture(event.pointerId);
+    });
+    track.addEventListener('pointermove', event => {
+      if (!track.hasPointerCapture(event.pointerId)) return;
+      const rect = track.getBoundingClientRect();
+      container.scrollTop = Math.max(0, Math.min(1, (event.clientY - rect.top) / rect.height)) * (container.scrollHeight - container.clientHeight);
+    });
+    track.addEventListener('keydown', event => {
+      const step = event.key === 'PageDown' || event.key === 'PageUp' ? container.clientHeight : 45;
+      if (event.key === 'ArrowDown' || event.key === 'PageDown') container.scrollTop += step;
+      else if (event.key === 'ArrowUp' || event.key === 'PageUp') container.scrollTop -= step;
+      else return;
+      event.preventDefault();
+    });
+    window.addEventListener('resize', update);
+    requestAnimationFrame(update);
+  }
+  setupScrollIndicator(document.getElementById('moodGrid'), document.querySelector('.mood-scrollbar'));
+  setupScrollIndicator(document.getElementById('algorithmOptions'), document.querySelector('.algorithm-scrollbar'));
+  setupScrollIndicator(document.getElementById('instrumentOptions'), document.querySelector('.instrument-scrollbar'));
+  setupScrollIndicator(document.getElementById('scaleOptions'), document.querySelector('.scale-scrollbar'));
   ['depth', 'disks', 'tempo', 'density', 'branchAngle', 'branchLength', 'volume'].forEach(id => {
     writeSlider(id, id === 'branchAngle' ? '°' : id === 'branchLength' || id === 'volume' ? '%' : '');
     $(id).addEventListener('input', () => {
@@ -156,7 +208,7 @@
     });
     if (id !== 'volume') $(id).addEventListener('change', () => generate());
   });
-  ['scale', 'instrument', 'kochMode'].forEach(id => $(id).addEventListener('change', () => { state[id] = $(id).value; generate(); }));
+  ['kochMode'].forEach(id => $(id).addEventListener('change', () => { state[id] = $(id).value; generate(); }));
   $('generateButton').addEventListener('click', () => generate(true));
   $('themeButton').addEventListener('click', () => {
     setTheme(document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark');

@@ -17,7 +17,7 @@
 3. Pause, resume, Stop, and seek along the timeline.
 4. Select each algorithm and confirm that visuals and sound structure change.
 5. Try depths 1 and 8, tempos 40 and 160, and densities 1 and 10.
-6. Try Calm, Dreamy, Deep Focus, Meditation and all four instruments.
+6. Try all eight atmospheres (Calm, Dreamy, Deep Focus, Meditation, Ambient Drift, Nocturne, Cinematic, and Pulse) and all four instruments.
 7. Change the scale and verify pitches remain tonal.
 8. Set volume to 0; confirm sound is silent. Restore volume.
 9. Export WAV; check it opens in an audio player and contains audible notes.
@@ -46,7 +46,7 @@ Chrome, Edge and Firefox on desktop are suggested for the live demo. Audio permi
 - **WAV export:** Chromium generated a RIFF/WAVE file, decoded with Python's `wave` module as 2-channel, 44,100-Hz, 16-bit audio, with nonzero signal (peak ≈ 0.10, RMS ≈ 0.023) and no clipped samples for the tested short composition.
 - **Test environment note:** The sandbox's Chromium blocks navigation to `file://` and `localhost` by administrator policy, so the in-container browser tests injected the same HTML/CSS/JS contents into a Chromium page. This does not indicate ordinary browsers block opening `index.html`; direct file-opening on the user's machine has not been separately verified here.
 
-**Still recommended manually:** listen to all four mood/instrument combinations with headphones, export a long composition, and check the target demo laptop/browser before submission.
+**Still recommended manually:** listen to each atmosphere with all four instruments using headphones, export a long composition, and check the target demo laptop/browser before submission.
 
 
 ## Extension verification (2026-11-26)

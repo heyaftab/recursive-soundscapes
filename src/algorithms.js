@@ -62,8 +62,8 @@
       offsets.forEach((offset, i) => grow(x2, y2, direction + offset, length * lengthMultiplier, d + 1, path + i));
     }
     grow(.5, .95, -Math.PI / 2, .22, 0, '');
-    const candidates = nodes.filter(n => n.depth > 0);
-    return { algorithm: 'tree', nodes, candidates: candidates.length ? candidates : nodes, totalNodes: nodes.length };
+    // Keep the depth-zero trunk first so the music and active highlight begin at the tree root.
+    return { algorithm: 'tree', nodes, candidates: nodes, totalNodes: nodes.length };
   }
 
   function koch(depth, mode) {

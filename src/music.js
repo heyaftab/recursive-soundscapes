@@ -6,13 +6,21 @@
     major: { root: 60, steps: [0, 2, 4, 5, 7, 9, 11], name: 'C major' },
     minor: { root: 57, steps: [0, 2, 3, 5, 7, 8, 10], name: 'A natural minor' },
     dorian: { root: 62, steps: [0, 2, 3, 5, 7, 9, 10], name: 'D dorian' },
-    lydian: { root: 65, steps: [0, 2, 4, 6, 7, 9, 11], name: 'F lydian' }
+    lydian: { root: 65, steps: [0, 2, 4, 6, 7, 9, 11], name: 'F lydian' },
+    mixolydian: { root: 67, steps: [0, 2, 4, 5, 7, 9, 10], name: 'G mixolydian' },
+    phrygian: { root: 64, steps: [0, 1, 3, 5, 7, 8, 10], name: 'E phrygian' },
+    harmonicMinor: { root: 57, steps: [0, 2, 3, 5, 7, 8, 11], name: 'A harmonic minor' },
+    blues: { root: 60, steps: [0, 3, 5, 6, 7, 10], name: 'C blues' }
   };
   const MOODS = {
     calm: { name: 'Calm', waveform: 'sine', attack: .045, release: .8, noteFactor: .94, reverb: .20, delay: .07, brightness: 950, padEvery: 8, velocity: .80 },
     dreamy: { name: 'Dreamy', waveform: 'sine', attack: .012, release: 1.45, noteFactor: 1.17, reverb: .32, delay: .13, brightness: 1800, padEvery: 6, velocity: .75 },
     focus: { name: 'Deep Focus', waveform: 'triangle', attack: .02, release: .32, noteFactor: .62, reverb: .09, delay: .08, brightness: 1200, padEvery: 10, velocity: .76 },
-    meditation: { name: 'Meditation', waveform: 'sine', attack: .24, release: 2.1, noteFactor: 1.55, reverb: .30, delay: .03, brightness: 720, padEvery: 5, velocity: .64 }
+    meditation: { name: 'Meditation', waveform: 'sine', attack: .24, release: 2.1, noteFactor: 1.55, reverb: .30, delay: .03, brightness: 720, padEvery: 5, velocity: .64 },
+    ambient: { name: 'Ambient Drift', waveform: 'sine', attack: .16, release: 1.8, noteFactor: 1.38, reverb: .42, delay: .18, brightness: 1450, padEvery: 4, velocity: .62 },
+    nocturne: { name: 'Nocturne', waveform: 'triangle', attack: .08, release: 1.25, noteFactor: 1.12, reverb: .27, delay: .20, brightness: 820, padEvery: 7, velocity: .70 },
+    cinematic: { name: 'Cinematic', waveform: 'sawtooth', attack: .11, release: 1.6, noteFactor: 1.32, reverb: .36, delay: .10, brightness: 1100, padEvery: 3, velocity: .66 },
+    pulse: { name: 'Pulse', waveform: 'triangle', attack: .008, release: .22, noteFactor: .48, reverb: .08, delay: .16, brightness: 2100, padEvery: 12, velocity: .78 }
   };
   RS.scales = SCALES;
   RS.moods = MOODS;
@@ -28,6 +36,7 @@
 
   function recursiveComposition(scene,s) {
     const scale=SCALES[s.scale]||SCALES.pentatonic,mood=MOODS[s.mood]||MOODS.calm;
+    const variationShift=((Number(s.variationIndex)||0)*2)%scale.steps.length;
     const beat=60/RS.clamp(s.tempo,40,160),density=Math.round(RS.clamp(s.density,1,10));
     const events=[],iterations=[];
     const safePitch=pitch=>{while(pitch>89)pitch-=12;while(pitch<45)pitch+=12;return pitch;};
@@ -45,10 +54,11 @@
         iterations.push({depth:level,time:cursor,duration:step*count});
         for(let i=0;i<count;i++){
           const node=segments[Math.floor(i*segments.length/count)];
-          const degree=Math.round(node.orientation/(Math.PI/3))+Math.floor(s.seed/137)%scale.steps.length;
+          const degree=Math.round(node.orientation/(Math.PI/3))+Math.floor(s.seed/137)%scale.steps.length+variationShift;
           const octave=Math.min(2,level-1);
           const duration=Math.max(.12,Math.min(step*.95,beat*1.6*node.length*mood.noteFactor));
-          add(node,cursor+i*step,toneFromIndex(degree,scale,octave),duration);
+          const shiftedOctave=octave+Math.floor(degree/scale.steps.length)-Math.floor((degree-variationShift)/scale.steps.length);
+          add(node,cursor+i*step,toneFromIndex(degree,scale,shiftedOctave),duration);
           if(level>0&&i%Math.max(3,11-density)===0){
             const lower=scene.levels[level-1][Math.floor(i*scene.levels[level-1].length/count)];
             add(lower,cursor+i*step,toneFromIndex(Math.round(lower.orientation/(Math.PI/3)),scale,Math.max(-1,octave-1)),step*1.4,'pad',.10);
@@ -60,7 +70,7 @@
     if(scene.algorithm==='hanoi'){
       const step=beat*.5;
       for(const node of scene.moves){
-        const degree=scene.disks-node.disk;
+        const degree=scene.disks-node.disk+variationShift;
         const pitch=scale.root-12+Math.floor(degree/scale.steps.length)*12+scale.steps[degree%scale.steps.length];
         add(node,.15+node.index*step,pitch,Math.min(step*.8,beat*mood.noteFactor*.6));
         if(density>2&&node.index%Math.max(3,13-density)===0){
@@ -82,6 +92,7 @@
     if(scene.algorithm==='koch'||scene.algorithm==='hanoi')return recursiveComposition(scene,s);
     const scale = SCALES[s.scale] || SCALES.pentatonic;
     const mood = MOODS[s.mood] || MOODS.calm;
+    const variationShift = ((Number(s.variationIndex) || 0) * 2) % scale.steps.length;
     const random = rnd(s.seed + 17);
     const candidates = scene.candidates;
     if (!candidates.length) throw new Error('The algorithm did not generate any nodes.');
@@ -117,6 +128,9 @@
         octave = node.depth >= 6 ? 1 : node.depth <= 2 ? -1 : 0;
       }
       degree += phraseVariations[Math.floor(i / 8) % phraseVariations.length];
+      const shiftedDegree = degree + variationShift;
+      octave += Math.floor(shiftedDegree / scale.steps.length) - Math.floor(degree / scale.steps.length);
+      degree = shiftedDegree;
       let pitch = toneFromIndex(degree, scale, octave);
       pitch = RS.clamp(pitch, 45, 89);
       const variation = random();
@@ -130,11 +144,11 @@
       if (i % mood.padEvery === 0) {
         const padPitch = toneFromIndex(degree - 2, scale, -1);
         events.push({ id: `pad-${i}`, time, pitch: padPitch, duration: Math.min(5, secondsPerBeat * (s.mood === 'meditation' ? 5.5 : 4.1)), velocity: .19 * mood.velocity, depth: node.depth, pan: pan * .4, sourceNodeId: node.id, kind: 'pad' });
-        if (s.mood === 'dreamy' || s.mood === 'meditation') {
+        if (['dreamy', 'meditation', 'ambient', 'nocturne', 'cinematic'].includes(s.mood)) {
           events.push({ id: `harm-${i}`, time: time + .09, pitch: toneFromIndex(degree + 2, scale, -1), duration: Math.min(5, secondsPerBeat * 4.3), velocity: .12 * mood.velocity, depth: node.depth, pan: -pan * .35, sourceNodeId: node.id, kind: 'pad' });
         }
       }
-      if (i % 12 === 0 && s.mood !== 'meditation') {
+      if (i % 12 === 0 && !['meditation', 'ambient', 'nocturne'].includes(s.mood)) {
         events.push({ id: `bass-${i}`, time, pitch: toneFromIndex(degree, scale, -2), duration: secondsPerBeat * 2.2, velocity: .18, depth: node.depth, pan: 0, sourceNodeId: node.id, kind: 'bass' });
       }
     }

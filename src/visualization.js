@@ -250,7 +250,9 @@
         ctx.lineWidth = Math.max(2.3, (9 - n.depth) * .56);
         ctx.lineCap = 'round'; ctx.strokeStyle = `rgba(197,169,255,${intensity})`;
         ctx.beginPath(); ctx.moveTo(this.coordX(n.x1), this.coordY(n.y1)); ctx.lineTo(this.coordX(n.x2), this.coordY(n.y2)); ctx.stroke();
-        ctx.beginPath(); ctx.arc(this.coordX(n.x2), this.coordY(n.y2), 3.3, 0, Math.PI * 2); ctx.fillStyle = '#d5bcff'; ctx.fill();
+        const activeX = n.depth === 0 ? n.x1 : n.x2;
+        const activeY = n.depth === 0 ? n.y1 : n.y2;
+        ctx.beginPath(); ctx.arc(this.coordX(activeX), this.coordY(activeY), 3.3, 0, Math.PI * 2); ctx.fillStyle = '#d5bcff'; ctx.fill();
       } else {
         const x = this.coordX(n.x), y = this.coordY(n.y);
         ctx.fillStyle = '#d5bcff'; ctx.beginPath(); ctx.arc(x, y, 5.2, 0, Math.PI * 2); ctx.fill();

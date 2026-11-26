@@ -63,7 +63,7 @@ The application shall provide:
 - Interactive visualization of recursive behavior.
 - Procedural music generation based on algorithm output.
 - Synthesized musical instruments and ambient sounds.
-- Four selectable sound moods.
+- Eight selectable sound atmospheres.
 - Audio playback controls.
 - Real-time visual synchronization with musical events.
 - Audio export in WAV format.
@@ -225,7 +225,7 @@ Limits must be enforced to prevent excessive computation and audio overload.
 
 ### 4.4 Sound Mood Selection
 
-**FR-018:** The system shall provide four selectable sound moods.
+**FR-018:** The system shall provide eight selectable sound atmospheres: Calm, Dreamy, Deep Focus, Meditation, Ambient Drift, Nocturne, Cinematic, and Pulse.
 
 | Mood | Intended Sound |
 |---|---|
