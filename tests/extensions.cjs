@@ -10,7 +10,7 @@ function check(scene,s){
     assert(ids.has(e.sourceNodeId));
     for(const key of ['time','pitch','duration','velocity','depth','pan'])assert(Number.isFinite(e[key]),key);
     assert(e.time>=0&&e.duration>0&&e.velocity>0&&e.velocity<=.8);
-    assert(e.pan>=-.85&&e.pan<=.85);assert(e.pitch>=36&&e.pitch<=89);
+    assert(e.pan>=-.85&&e.pan<=.85);assert(e.pitch>=36&&e.pitch<=(scene.algorithm==='koch'?107:89));
     assert(R.scales[s.scale].steps.includes(((e.pitch-R.scales[s.scale].root)%12+12)%12));
     assert(e.time+e.duration+e.release<music.duration);
   }
@@ -36,7 +36,17 @@ for(const mode of ['curve','snowflake'])for(const depth of [1,3,5]){
   for(const tempo of [40,80,160])for(const density of [1,4,10])for(const scale of Object.keys(R.scales))for(const mood of Object.keys(R.moods)){
     const s={...R.defaults,algorithm:'koch',depth,kochMode:mode,tempo,density,scale,mood};
     const music=check(scene,s);assert.equal(music.iterations.length,depth+1);
-    for(let d=0;d<=depth;d++)assert(music.events.some(e=>e.kind==='melody'&&e.depth===d));
+    for(const event of music.events){
+      assert.equal(Math.floor(event.pitch / 12), 3 + event.depth);
+    }
+    for(const iteration of music.iterations){
+      const opening = music.events.filter(e=>e.time===iteration.time);
+      const lead = opening.find(e=>e.kind==='melody');
+      assert.equal(lead.depth,iteration.depth);
+      for(let layer=0;layer<iteration.depth;layer++){
+        assert(opening.some(e=>e.kind==='pad'&&e.depth===layer&&e.pitch===lead.pitch-12*(iteration.depth-layer)));
+      }
+    }
   }
 }
 for(let disks=1;disks<=8;disks++){
@@ -50,7 +60,7 @@ for(let disks=1;disks<=8;disks++){
   assert.equal(pegs[2].length,disks);
   for(const tempo of [40,80,160])for(const density of [1,4,10])for(const scale of Object.keys(R.scales))for(const mood of Object.keys(R.moods)){
     const s={...R.defaults,algorithm:'hanoi',disks,tempo,density,scale,mood};const music=check(scene,s);
-    const melody=music.events.filter(e=>e.kind==='melody');assert.equal(melody.length,scene.moves.length);
+    const melody=music.events;assert(melody.every(e=>e.kind==='melody'));assert.equal(melody.length,scene.moves.length);
     const pitches=new Map();
     melody.forEach((e,i)=>{assert.equal(e.sourceNodeId,scene.moves[i].id);assert.equal(e.pan,[-.8,0,.8][scene.moves[i].to]);assert(Math.abs(e.time-(.15+i*30/tempo))<1e-9);pitches.set(scene.moves[i].disk,e.pitch);});
     for(let disk=2;disk<=disks;disk++)assert(pitches.get(disk)<pitches.get(disk-1));

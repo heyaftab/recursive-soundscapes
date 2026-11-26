@@ -809,15 +809,15 @@ This extension supersedes the original three-algorithm scope and its global 95-s
 
 - Studio order: Fibonacci Sequence, Sierpinski Triangle, Recursive Branching Tree, Koch Snowflake / Curve, Towers of Hanoi (experimental). Each selection explains its recursion and musical interpretation.
 - Koch: depth 1-5, curve or snowflake; true four-way recursive subdivision; 4^N or 3*4^N final segments; normalized aspect-preserving centered rendering; smoothly interpolated iterations; depth colors and active segment highlights. All geometry is generated, while a bounded ordered traversal is sonified per iteration.
-- Koch sound: orientation maps to scale degree; length to bounded duration; depth to capped octave layers and voice; horizontal position to pan; iteration/order to evolving rhythmic sequence. Selected lower-register pads persist as higher iterations enter.
+- Koch sound: orientation maps to scale degree; length to bounded duration; depth to successive octave layers and voice; horizontal position to pan; iteration/order to evolving rhythmic sequence. Each new iteration starts with a note in every earlier register alongside the melody, and lower-register accompaniment returns on selected beats.
 - Hanoi: 1-8 disks, three pegs, complete recursive solution with validated top-disk moves and no larger-on-smaller placement. Show minimum moves, current/total moves, source/destination, and recursion depth. Animate lift, transfer, and placement; highlight the moving disk and mark completion.
-- Hanoi sound: every move produces one melody event. Larger disks map monotonically to lower selected-scale pitches; destination pan is -0.8, 0, or +0.8. Recursion depth selects voice layer. Density changes supporting sound only, never skips or reorders moves.
+- Hanoi sound: every move produces one melody event. Larger disks map monotonically to lower selected-scale pitches; destination pan is -0.8, 0, or +0.8. Recursion depth selects voice layer. Each move triggers exactly one note.
 - Both extensions use the existing MusicEvent contract (id, time, pitch, duration, velocity, depth, pan, sourceNodeId), shared synthesizer, audio-clock position, and WAV renderer.
 - Play/pause/resume, stop, seek, loop, regeneration, tempo, volume, scales, moods, instruments, theme toggle, and reduced motion remain supported. Changes stop prior playback and invalidate pending asynchronous starts.
 
 ### Nonfunctional requirements implemented
 
-No runtime dependencies, paid APIs, backend, or account required. Koch has at most 4,095 stored segment nodes across levels, 3,072 final segments, and cached final-iteration paths. Hanoi has at most 255 validated moves with small peg snapshots. New musical timelines have fewer than 400 events, duration below 200 seconds, MIDI register 45-89, and no more than 12 simultaneous note voices including release tails. Export includes note releases and effects tail. Mobile uses the existing stacked responsive layout. Default dark palette: background #090B16, panel #171E34, cyan #65E7EF, purple #A78BFA, pink #F0A5E8.
+No runtime dependencies, paid APIs, backend, or account required. Koch has at most 4,095 stored segment nodes across levels, 3,072 final segments, and cached final-iteration paths. Hanoi has at most 255 validated moves with small peg snapshots. New musical timelines have fewer than 400 events, duration below 200 seconds, MIDI pitches within 36-107, and no more than 12 simultaneous note voices including release tails. Export includes note releases and effects tail. Mobile uses the existing stacked responsive layout. Default dark palette: background #090B16, panel #171E34, cyan #65E7EF, purple #A78BFA, pink #F0A5E8.
 
 ### Acceptance evidence
 

@@ -214,6 +214,7 @@
       $('trackTitle').textContent = `${info.title} in ${RS.moods[state.mood].name}`;
       $('trackSubtitle').textContent = `${RS.scales[state.scale].name} · ${music.noteCount} musical events`;
       $('depth').closest('.control-group').hidden = state.algorithm === 'hanoi';
+      $('density').closest('.control-group').hidden = state.algorithm === 'hanoi';
       $('hanoiControls').hidden = state.algorithm !== 'hanoi';
       $('moveFormula').textContent = 'Minimum moves: 2^'+state.disks+' \u2212 1 = '+(2**state.disks-1);
       $('kochControls').hidden = state.algorithm !== 'koch';

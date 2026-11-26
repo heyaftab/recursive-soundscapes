@@ -93,7 +93,7 @@
     }
     return {algorithm:'koch',mode,depth,nodes,levels,candidates:levels[depth],totalNodes:levels[depth].length};
   }
-  RS.algorithmInfo.koch={title:'Koch snowflake / curve',subtitle:'Four smaller paths. A richer musical world.',description:'Replace the middle third of each line with a triangular peak. Every line becomes four; each iteration adds a higher musical layer.',mapping:'Segment orientation selects scale notes, length sets duration, and horizontal position sets pan. Higher iterations retain gentle lower-octave echoes.',tags:['ANGLE \u2192 PITCH','ITERATION \u2192 LAYER'],figure:'04'};
+  RS.algorithmInfo.koch={title:'Koch snowflake / curve',subtitle:'Four smaller paths. A richer musical world.',description:'Replace the middle third of each line with a triangular peak. Every line becomes four; each iteration adds a higher musical layer.',mapping:'Segment orientation selects scale notes, length sets duration, and horizontal position sets pan. Each iteration rises an octave and brings back earlier registers on selected beats.',tags:['ANGLE \u2192 PITCH','ITERATION \u2192 LAYER'],figure:'04'};
 
   function hanoi(disks) {
     const pegs=[Array.from({length:disks},(_,i)=>disks-i),[],[]],nodes=[];
@@ -112,7 +112,7 @@
     solve(disks,0,2,1,1);
     return {algorithm:'hanoi',disks,nodes,moves:nodes,candidates:nodes,totalNodes:nodes.length,initial,final:snapshot()};
   }
-  RS.algorithmInfo.hanoi={title:'Towers of Hanoi',subtitle:'An experimental rhythm of recursive resolution.',description:'Move the top disk between three pegs, never placing a larger disk on a smaller one. Solve the smaller tower, move the largest disk, then solve the smaller tower again.',mapping:'Every legal move sounds a note: larger disks sing lower, smaller disks higher. Destination pegs pan left, center or right; recursion depth colors the voice. Density adds supporting texture without skipping moves.',tags:['DISK SIZE \u2192 PITCH','DESTINATION \u2192 PAN'],figure:'05'};
+  RS.algorithmInfo.hanoi={title:'Towers of Hanoi',subtitle:'An experimental rhythm of recursive resolution.',description:'Move the top disk between three pegs, never placing a larger disk on a smaller one. Solve the smaller tower, move the largest disk, then solve the smaller tower again.',mapping:'Every legal move sounds a note: larger disks sing lower, smaller disks higher. Destination pegs pan left, center or right; recursion depth colors the voice.',tags:['DISK SIZE \u2192 PITCH','DESTINATION \u2192 PAN'],figure:'05'};
 
   RS.generateScene = function (rawSettings) {
     const s = rawSettings;

@@ -55,8 +55,8 @@ Chrome, Edge and Firefox on desktop are suggested for the live demo. Audio permi
 
 - node tests/verify.cjs: PASS, 135 original algorithm/scale/depth/density regressions.
 - node tests/extensions.cjs: PASS, 2,520 new combinations across minimum/default/maximum Koch depths, all Hanoi disk counts, tempos 40/80/160, densities 1/4/10, all five scales, and all four moods.
-- Geometry: every Koch level has 4^N or 3*4^N segments, continuous endpoints and expected 1/3 length ratios. Normalized coordinates fit the stage.
-- Hanoi: independent peg replay validates every move, before/after snapshots, top-disk source, legal destination, final right-peg stack, 2^N-1 count, and one ordered melody event per move. Density leaves timing and sequence intact.
+- Geometry: every Koch level has 4^N or 3*4^N segments, continuous endpoints and expected 1/3 length ratios. Normalized coordinates fit the stage. Each iteration opens with its melody and a quieter note in each earlier octave.
+- Hanoi: independent peg replay validates every move, before/after snapshots, top-disk source, legal destination, final right-peg stack, 2^N-1 count, and exactly one note event per move. Three disks yield seven legal moves and seven notes. Every note pans by destination peg.
 - Events: unique IDs, valid source references, finite time/pitch/duration/depth/velocity/pan, selected-scale notes, safe register, deterministic regeneration for a fixed seed, bounded total duration, and no more than 12 simultaneous note voices including release.
 - Chromium: all five choices load without console exceptions. Verified Koch curve/snowflake counts at depth 5, Hanoi eight-disk count, contextual controls, Play/Pause/Resume, seek, Stop reset, regenerate while playing, algorithm switching, completion text, loop restart and player-state synchronization.
 - Responsive: 390x844 viewport has no horizontal overflow. Captured desktop and full-page mobile screenshots of both new algorithms; checked dark styling, geometry fit, disks, and status. Reduced-motion setting tested.
@@ -79,3 +79,14 @@ Final edge checks: zero-volume export is digitally silent; Stop invalidates a pe
 - `node --check` passed for `app.js`, `audio.js`, `music.js`, and `visualization.js`.
 - Browser automation could not start in this environment: `tests/browser.cjs` requires Playwright; its fallback expects `TEMP` to point to the optional external verification folder, and `TEMP` is unset here. A visual browser check of Bloom mode remains manual.
 - The project is served as static files (`vercel.json` sets `buildCommand: null` and `outputDirectory: "."`), so there is no production build command. The JavaScript syntax and static resource checks are the applicable local checks.
+
+## Chrome submission check (2026-11-26)
+
+- A local Chrome run on a temporary copy passed the five-algorithm browser suite. The Export WAV button produced a RIFF download. The suite measured 64 additional short stereo WAV renders with nonzero audio and no clipping.
+- An additional Koch Snowflake check changed depth, entered Bloom mode, played, paused, resumed, changed volume, and exited with Escape. Playback continued in the studio and the volume setting carried over.
+- A headphone listening check on the intended demo device is still pending.
+
+### Octave layering and Hanoi note count
+
+- The extension suite checks the octave assigned to each Koch event and verifies that each iteration opens with every earlier octave. It also verifies exactly one correctly panned note per Hanoi move across all supported disk counts.
+- The Chrome browser suite passed for all five modes. Its 64 short stereo WAV renders produced nonzero audio without clipping.
