@@ -59,6 +59,7 @@
     }
     coordX(x) { return this.width * (.5 + (x - .5) * .78); }
     coordY(y) { return this.height * (.5 + (y - .5) * .9); }
+    treeY(y) { return this.coordY(.95 + (y - .95) * 1.35); }
     fibonacciX(x) { return this.coordX(x); }
     fibonacciY(y) { return this.coordY(y); }
     traversalX(x) {
@@ -67,6 +68,7 @@
       return this.width/2+(x-.5)*size;
     }
     traversalY(y) {
+      if(this.scene?.algorithm==='tree')return this.treeY(y);
       if(this.scene?.algorithm!=='koch')return this.coordY(y);
       const size=Math.min(this.width,this.height)*.95*.78;
       return this.coordY(.46+(y-.5)*size/this.height);
@@ -164,7 +166,7 @@
       } else if (this.scene.algorithm === 'tree') {
         // Branches share endpoints — the geometry of the tree is itself recursive.
         nodes.forEach(n => {
-          const x1 = this.coordX(n.x1), y1 = this.coordY(n.y1), x2 = this.coordX(n.x2), y2 = this.coordY(n.y2);
+          const x1 = this.coordX(n.x1), y1 = this.treeY(n.y1), x2 = this.coordX(n.x2), y2 = this.treeY(n.y2);
           ctx.strokeStyle = dark
             ? (n.depth < 2 ? 'rgba(140,205,235,.66)' : n.depth % 2 === 0 ? 'rgba(115,219,220,.48)' : 'rgba(167,139,250,.42)')
             : (n.depth < 2 ? 'rgba(56,112,147,.76)' : n.depth % 2 === 0 ? 'rgba(8,127,145,.62)' : 'rgba(118,85,189,.56)');
@@ -307,6 +309,7 @@
       }
       const age = Math.min(1, (timestamp - this.activeSince) / 900);
       const intensity = this.reducedMotion ? .75 : 1 - age * .46;
+      const nodeY = y => this.scene.algorithm === 'tree' ? this.treeY(y) : this.coordY(y);
       ctx.save();
       ctx.shadowColor = '#a78bfa'; ctx.shadowBlur = this.reducedMotion ? 8 : 22;
       if (n.type === 'triangle') {
@@ -316,10 +319,10 @@
       } else if (n.type === 'branch') {
         ctx.lineWidth = Math.max(2.3, (9 - n.depth) * .56);
         ctx.lineCap = 'round'; ctx.strokeStyle = `rgba(197,169,255,${intensity})`;
-        ctx.beginPath(); ctx.moveTo(this.coordX(n.x1), this.coordY(n.y1)); ctx.lineTo(this.coordX(n.x2), this.coordY(n.y2)); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(this.coordX(n.x1), nodeY(n.y1)); ctx.lineTo(this.coordX(n.x2), nodeY(n.y2)); ctx.stroke();
         const activeX = n.depth === 0 ? n.x1 : n.x2;
         const activeY = n.depth === 0 ? n.y1 : n.y2;
-        ctx.beginPath(); ctx.arc(this.coordX(activeX), this.coordY(activeY), 3.3, 0, Math.PI * 2); ctx.fillStyle = '#d5bcff'; ctx.fill();
+        ctx.beginPath(); ctx.arc(this.coordX(activeX), nodeY(activeY), 3.3, 0, Math.PI * 2); ctx.fillStyle = '#d5bcff'; ctx.fill();
       } else {
         const x = this.fibonacciX(n.x), y = this.fibonacciY(n.y);
         ctx.fillStyle = '#d5bcff'; ctx.beginPath(); ctx.arc(x, y, 5.2, 0, Math.PI * 2); ctx.fill();
@@ -328,7 +331,7 @@
       }
       if (n.type !== 'point' && !this.reducedMotion) {
         ctx.strokeStyle = `rgba(185,145,255,${.4 * intensity})`; ctx.lineWidth = 1;
-        ctx.beginPath(); ctx.arc(this.coordX(n.x), this.coordY(n.y), 10 + age * 19, 0, Math.PI * 2); ctx.stroke();
+        ctx.beginPath(); ctx.arc(this.coordX(n.x), nodeY(n.y), 10 + age * 19, 0, Math.PI * 2); ctx.stroke();
       }
       ctx.restore();
       if(['fibonacci','sierpinski','tree'].includes(this.scene.algorithm))this.drawTraversalBall(ctx);

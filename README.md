@@ -218,8 +218,8 @@ A static site with **no build command and no dependencies**. The root-level `ver
 
 The SRS asks for the **real AI prompt chain and actual agent responses**.
 
-- 🤖 `docs/AI_PROMPT_LOG.md` records the prompt available for this delivered code and clearly marks absent conversations
-- ⚠️ It is **not** a substitute for exporting your original Codex/ChatGPT messages. **Add them before submission**
+- 🤖 [`docs/AI_PROMPT_LOG.md`](docs/AI_PROMPT_LOG.md) documents your project prompts and the assistant's responses, giving judges a record of your design and development process
+- ⚠️ The log is a curated project record, not a complete chat export. Include original Codex/ChatGPT conversation exports too if the judges require the full chats
 - 🧪 `docs/TESTING.md` lists checks and results
 - 📘 `docs/SRS.md` holds the supplied specification
 

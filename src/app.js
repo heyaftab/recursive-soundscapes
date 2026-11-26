@@ -31,6 +31,7 @@
   let exporting = false;
   let toastTimer = null;
   let relaxationTimer = null;
+  let relaxationPlayPending = false;
   const stage = new RS.VisualStage($('visualCanvas'));
   const audio = new RS.AudioEngine((position, event) => {
     stage.setActive(event?.sourceNodeId || null);
@@ -84,6 +85,13 @@
     clearTimeout(toastTimer);
     toastTimer = setTimeout(() => node.classList.remove('visible'), 3400);
   }
+  function setStudioStatus(stateName) {
+    const status = $('studioStatus');
+    const label = stateName === 'ready' ? 'STUDIO ONLINE' : stateName === 'unavailable' ? 'AUDIO UNAVAILABLE' : 'STUDIO ERROR';
+    status.dataset.status = stateName;
+    status.setAttribute('aria-label', label.toLowerCase().replace(/\b\w/g, char => char.toUpperCase()));
+    status.querySelector('span').textContent = label;
+  }
   function setTheme(theme) {
     const isDark = theme === 'dark';
     document.documentElement.dataset.theme = isDark ? 'dark' : 'light';
@@ -104,16 +112,20 @@
     $('playingEyebrow').textContent = playing ? 'NOW PLAYING' : 'YOUR COMPOSITION';
     document.body.classList.toggle('is-playing', playing);
     stage.setPlaying(playing);
-    $('relaxPlayIcon').hidden = playing;
-    $('relaxPauseIcon').hidden = !playing;
-    $('relaxPlayButton').setAttribute('aria-label', playing ? 'Pause playback' : 'Resume playback');
-    $('relaxPlayButton').setAttribute('title', playing ? 'Pause playback' : 'Resume playback');
+    setRelaxPlayState(playing);
+  }
+  function setRelaxPlayState(playing) {
+    const button = $('relaxPlayButton');
+    button.dataset.playbackState = playing ? 'playing' : 'paused';
+    button.setAttribute('aria-label', playing ? 'Pause playback' : 'Play playback');
+    button.setAttribute('title', playing ? 'Pause playback' : 'Play playback');
+    button.setAttribute('aria-pressed', String(playing));
   }
   function syncRelaxation(event) {
     $('relaxTrackTitle').textContent = $('trackTitle').textContent;
-    $('relaxTrackDetail').textContent = event
-      ? `${RS.noteName(event.pitch)} · ${event.sourceNodeId.replace(/^\w-/, '#')} · following the recursive shape`
-      : 'Follow the shape as it unfolds';
+    $('relaxTrackDetail').textContent = audio.playing
+      ? event ? `${RS.noteName(event.pitch)} · ${event.sourceNodeId.replace(/^\w-/, '#')} · following the recursive shape` : 'Following the recursive shape'
+      : audio.position() > 0 ? 'Paused · press play to continue' : 'Ready · press play to begin';
     $('relaxVolume').value = state.volume;
     $('relaxVolumeValue').textContent = `${state.volume}%`;
   }
@@ -133,6 +145,8 @@
     $('relaxationControls').hidden = false;
     $('relaxButton').setAttribute('aria-pressed', 'true');
     $('relaxButton').setAttribute('aria-label', 'Exit Bloom mode');
+    $('relaxButton').setAttribute('title', 'Exit Bloom mode');
+    updateTransport();
     syncRelaxation(audio.getActiveEvent(audio.position()));
     resetRelaxationFade();
   }
@@ -143,19 +157,29 @@
     $('relaxationControls').hidden = true;
     $('relaxationControls').classList.remove('is-faded');
     $('relaxButton').setAttribute('aria-pressed', 'false');
-    $('relaxButton').setAttribute('aria-label', 'Start playback in Bloom mode');
+    $('relaxButton').setAttribute('aria-label', 'Enter Bloom mode');
+    $('relaxButton').setAttribute('title', 'Enter Bloom mode');
     if (exitFullscreen && (document.fullscreenElement || document.webkitFullscreenElement)) {
       const leaveFullscreen = document.exitFullscreen || document.webkitExitFullscreen;
       leaveFullscreen?.call(document);
     }
   }
   function writeSlider(id, suffix = '') {
-    const node = $(id);
+    const node = id === 'volume' ? $('playerVolume') : $(id);
     const val = Number(node.value);
-    const valueNode = $(id + 'Value');
+    const valueNode = id === 'volume' ? $('playerVolumeValue') : $(id + 'Value');
     if (valueNode) valueNode.textContent = id === 'density' ? `${val} / 10` : id === 'tempo' ? `${val} BPM` : `${val}${suffix}`;
     node.style.setProperty('--range-fill', `${100 * (val - Number(node.min)) / (Number(node.max) - Number(node.min))}%`);
     state[id] = val;
+    if (id === 'volume') syncPlayerVolume();
+  }
+  function syncPlayerVolume() {
+    const slider = $('playerVolume');
+    if (!slider) return;
+    slider.value = state.volume;
+    slider.style.setProperty('--range-fill', `${state.volume}%`);
+    const output = $('playerVolumeValue');
+    if (output) output.textContent = `${state.volume}%`;
   }
   function selectOptions(selector, attribute, value) {
     document.querySelectorAll(selector).forEach(node => {
@@ -203,9 +227,11 @@
       $('loopButton').setAttribute('aria-pressed', String(audio.loop));
       $('loopButton').classList.toggle('active', audio.loop);
       $('generateButton').classList.remove('generating');
+      setStudioStatus(RS.audioSupported ? 'ready' : 'unavailable');
       persistSettings();
       if (newVariation) toast('New recursive variation generated.');
     } catch (error) {
+      if ($('studioStatus').dataset.status === 'loading') setStudioStatus('error');
       toast(`Could not generate: ${error.message}`, true);
       console.error(error);
     }
@@ -275,13 +301,14 @@
   setupScrollIndicator(document.getElementById('instrumentOptions'), document.querySelector('.instrument-scrollbar'));
   setupScrollIndicator(document.getElementById('scaleOptions'), document.querySelector('.scale-scrollbar'));
   ['depth', 'disks', 'tempo', 'density', 'branchAngle', 'branchLength', 'volume'].forEach(id => {
-    $(id).value = state[id];
+    const slider = id === 'volume' ? $('playerVolume') : $(id);
+    slider.value = state[id];
     writeSlider(id, id === 'branchAngle' ? '°' : id === 'branchLength' || id === 'volume' ? '%' : '');
-    $(id).addEventListener('input', () => {
+    slider.addEventListener('input', () => {
       writeSlider(id, id === 'branchAngle' ? '°' : id === 'branchLength' || id === 'volume' ? '%' : '');
       if (id === 'volume') { audio.setVolume(state.volume); syncRelaxation(audio.getActiveEvent(audio.position())); persistSettings(); }
     });
-    if (id !== 'volume') $(id).addEventListener('change', () => generate());
+    if (id !== 'volume') slider.addEventListener('change', () => generate());
   });
   $('kochMode').value = state.kochMode;
   ['kochMode'].forEach(id => $(id).addEventListener('change', () => { state[id] = $(id).value; generate(); }));
@@ -293,7 +320,7 @@
     stage.setReducedMotion(window.matchMedia?.('(prefers-reduced-motion: reduce)').matches || false);
     $('reducedMotion').checked = stage.reducedMotion;
     for (const id of ['depth', 'disks', 'tempo', 'density', 'branchAngle', 'branchLength', 'volume']) {
-      $(id).value = state[id];
+      (id === 'volume' ? $('playerVolume') : $(id)).value = state[id];
       writeSlider(id, id === 'branchAngle' ? '°' : id === 'branchLength' || id === 'volume' ? '%' : '');
     }
     $('kochMode').value = state.kochMode;
@@ -303,23 +330,38 @@
   $('themeButton').addEventListener('click', () => {
     setTheme(document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark');
   });
-  $('relaxButton').addEventListener('click', async () => {
+  $('relaxButton').addEventListener('click', () => {
     if (document.body.classList.contains('immersive-mode')) { exitRelaxation(); return; }
-    try {
-      if (!audio.playing) await audio.play();
-      enterRelaxation();
-    } catch (error) { toast(error.message || 'Could not start Bloom mode.', true); }
+    if (audio.playing) audio.pause();
+    enterRelaxation();
   });
   $('exitRelaxation').addEventListener('click', () => exitRelaxation());
   $('relaxPlayButton').addEventListener('click', async () => {
-    try {
-      if (audio.playing) audio.pause(); else await audio.play();
+    if (relaxationPlayPending) return;
+    if (audio.playing) {
+      audio.pause();
       updateTransport();
+      syncRelaxation(null);
       resetRelaxationFade();
-    } catch (error) { toast(error.message || 'Could not start playback.', true); }
+      return;
+    }
+    relaxationPlayPending = true;
+    $('relaxPlayButton').disabled = true;
+    $('relaxTrackDetail').textContent = 'Starting playback…';
+    try {
+      await audio.play();
+    } catch (error) {
+      toast(error.message || 'Could not start playback.', true);
+    } finally {
+      relaxationPlayPending = false;
+      $('relaxPlayButton').disabled = false;
+      updateTransport();
+      syncRelaxation(audio.getActiveEvent(audio.position()));
+      resetRelaxationFade();
+    }
   });
   $('relaxVolume').addEventListener('input', () => {
-    $('volume').value = $('relaxVolume').value;
+    $('playerVolume').value = $('relaxVolume').value;
     writeSlider('volume', '%');
     audio.setVolume(state.volume);
     syncRelaxation(audio.getActiveEvent(audio.position()));
